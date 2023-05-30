@@ -96,6 +96,10 @@ var tokens = [...]string{
 	SK_CloseBracket: "]",
 	SK_Dot:          ".",
 	SK_Comma:        ",",
+	// Keyword
+	SK_TrueKeyword:  "true",
+	SK_FalseKeyword: "false",
+	SK_NullKeyword:  "null",
 }
 
 func (tok SyntaxKind) IsKeyword() bool { return tok >= SK_FirstKeyword && tok <= SK_LastKeyword }
