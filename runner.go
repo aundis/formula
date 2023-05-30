@@ -14,66 +14,80 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func NewRunner() *Runner {
-	runner := &Runner{}
+const ctxKeyForRunner = "formulaRunner"
+
+var callFunctions sync.Map
+
+func init() {
 	// FUNCTION TIME
-	runner.callFunctions.Store("now", funNow)
-	runner.callFunctions.Store("toDay", funToDay)
-	runner.callFunctions.Store("date", funDate)
-	runner.callFunctions.Store("addDate", funAddDate)
-	runner.callFunctions.Store("year", funYear)
-	runner.callFunctions.Store("month", funMonth)
-	runner.callFunctions.Store("day", funDay)
-	runner.callFunctions.Store("hour", funHour)
-	runner.callFunctions.Store("minute", funMinute)
-	runner.callFunctions.Store("second", funSecond)
-	runner.callFunctions.Store("millSecond", funMillSecond)
-	runner.callFunctions.Store("weekDay", funWeekDay)
-	runner.callFunctions.Store("timeFormat", funTimeFormat)
+	callFunctions.Store("now", funNow)
+	callFunctions.Store("toDay", funToDay)
+	callFunctions.Store("date", funDate)
+	callFunctions.Store("addDate", funAddDate)
+	callFunctions.Store("year", funYear)
+	callFunctions.Store("month", funMonth)
+	callFunctions.Store("day", funDay)
+	callFunctions.Store("hour", funHour)
+	callFunctions.Store("minute", funMinute)
+	callFunctions.Store("second", funSecond)
+	callFunctions.Store("millSecond", funMillSecond)
+	callFunctions.Store("weekDay", funWeekDay)
+	callFunctions.Store("timeFormat", funTimeFormat)
 	// FUNCTION MATH
-	runner.callFunctions.Store("abs", funAbs)
-	runner.callFunctions.Store("ceil", funCeil)
+	callFunctions.Store("abs", funAbs)
+	callFunctions.Store("ceil", funCeil)
 	// runner.callFunctions.Store("min", funExp)
-	runner.callFunctions.Store("floor", funFloor)
-	runner.callFunctions.Store("ln", funLn)
-	runner.callFunctions.Store("log", funLog)
-	runner.callFunctions.Store("max", funMax)
-	runner.callFunctions.Store("min", funMin)
-	runner.callFunctions.Store("mod", funMod)
-	runner.callFunctions.Store("round", funRound)
-	runner.callFunctions.Store("roundBank", funRoundBank)
-	runner.callFunctions.Store("roundCash", funRoundCash)
-	runner.callFunctions.Store("roundCeil", funRoundCeil)
-	runner.callFunctions.Store("roundDown", funRoundDown)
-	runner.callFunctions.Store("roundFloor", funRoundFloor)
-	runner.callFunctions.Store("roundUp", funRoundUp)
-	runner.callFunctions.Store("sqrt", funSqrt)
+	callFunctions.Store("floor", funFloor)
+	callFunctions.Store("ln", funLn)
+	callFunctions.Store("log", funLog)
+	callFunctions.Store("max", funMax)
+	callFunctions.Store("min", funMin)
+	callFunctions.Store("mod", funMod)
+	callFunctions.Store("round", funRound)
+	callFunctions.Store("roundBank", funRoundBank)
+	callFunctions.Store("roundCash", funRoundCash)
+	callFunctions.Store("roundCeil", funRoundCeil)
+	callFunctions.Store("roundDown", funRoundDown)
+	callFunctions.Store("roundFloor", funRoundFloor)
+	callFunctions.Store("roundUp", funRoundUp)
+	callFunctions.Store("sqrt", funSqrt)
 	// FUNCTION STRING
-	runner.callFunctions.Store("startWith", funStartWith)
-	runner.callFunctions.Store("endWith", funEndWith)
-	runner.callFunctions.Store("contains", funContains)
-	runner.callFunctions.Store("find", funFind)
-	runner.callFunctions.Store("includes", funIncludes)
-	runner.callFunctions.Store("left", funLeft)
-	runner.callFunctions.Store("right", funRight)
-	runner.callFunctions.Store("len", funLen)
-	runner.callFunctions.Store("lower", funLower)
-	runner.callFunctions.Store("upper", funUpper)
-	runner.callFunctions.Store("lpad", funLpad)
-	runner.callFunctions.Store("rpad", funRpad)
-	runner.callFunctions.Store("mid", funMid)
-	runner.callFunctions.Store("replace", funReplace)
-	runner.callFunctions.Store("trim", funTrim)
-	runner.callFunctions.Store("regexp", funRegexp)
+	callFunctions.Store("startWith", funStartWith)
+	callFunctions.Store("endWith", funEndWith)
+	callFunctions.Store("contains", funContains)
+	callFunctions.Store("find", funFind)
+	callFunctions.Store("includes", funIncludes)
+	callFunctions.Store("left", funLeft)
+	callFunctions.Store("right", funRight)
+	callFunctions.Store("len", funLen)
+	callFunctions.Store("lower", funLower)
+	callFunctions.Store("upper", funUpper)
+	callFunctions.Store("lpad", funLpad)
+	callFunctions.Store("rpad", funRpad)
+	callFunctions.Store("mid", funMid)
+	callFunctions.Store("replace", funReplace)
+	callFunctions.Store("trim", funTrim)
+	callFunctions.Store("regexp", funRegexp)
+}
+
+func NewRunner() *Runner {
+	runner := &Runner{
+		value: map[string]interface{}{},
+	}
 	return runner
 }
 
-type CallHandle func(r *Runner, name string, args []interface{}) (interface{}, error)
+func RunnerFromCtx(ctx context.Context) *Runner {
+	if v := ctx.Value(ctxKeyForRunner); v != nil {
+		return v.(*Runner)
+	}
+	return nil
+}
 
 type Runner struct {
-	IdentifierResolver         func(r *Runner, name string) (interface{}, error)
-	SelectorExpressionResolver func(r *Runner, name string) (interface{}, error)
-	callFunctions              sync.Map
+	value                      map[string]interface{}
+	IdentifierResolver         func(ctx context.Context, name string) (interface{}, error)
+	SelectorExpressionResolver func(ctx context.Context, name string) (interface{}, error)
 }
 
 func (r *Runner) Resolve(ctx context.Context, v Expression) (interface{}, error) {
@@ -107,8 +121,10 @@ func (r *Runner) resolveIdentifier(ctx context.Context, expr *Identifier) (inter
 		return true, nil
 	case "false":
 		return false, nil
+	default:
+		ctx = context.WithValue(ctx, ctxKeyForRunner, r)
+		return r.IdentifierResolver(ctx, expr.Value)
 	}
-	return nil, nil
 }
 
 func (r *Runner) resolveSelectorExpression(ctx context.Context, expr *SelectorExpression) (interface{}, error) {
@@ -117,8 +133,8 @@ func (r *Runner) resolveSelectorExpression(ctx context.Context, expr *SelectorEx
 		return nil, err
 	}
 	name := strings.Join(names, ".")
-	fmt.Print(name)
-	return nil, nil
+	ctx = context.WithValue(ctx, ctxKeyForRunner, r)
+	return r.SelectorExpressionResolver(ctx, name)
 }
 
 func resolveSelecotrNames(expr Expression) ([]string, error) {
@@ -153,7 +169,7 @@ func (r *Runner) resolveCallExpression(ctx context.Context, expr *CallExpression
 			args = append(args, av)
 		}
 	}
-	fun, ok := r.callFunctions.Load(name)
+	fun, ok := callFunctions.Load(name)
 	if !ok {
 		return nil, fmt.Errorf("not found call function '%s'", name)
 	}
@@ -613,10 +629,11 @@ func (r *Runner) resolveConditionalExpression(ctx context.Context, expr *Conditi
 }
 
 func (r *Runner) Set(key string, value interface{}) {
+	r.value[key] = value
 }
 
 func (r *Runner) Get(key string) interface{} {
-	return nil
+	return r.value[key]
 }
 
 // CALL
