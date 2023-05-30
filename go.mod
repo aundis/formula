@@ -1,4 +1,4 @@
-module formula
+module gformula
 
 go 1.18
 
