@@ -1,4 +1,4 @@
-module gformula
+module github.com/aundis/formula
 
 go 1.18
 
