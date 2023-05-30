@@ -9,12 +9,27 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/shopspring/decimal"
 )
 
 func NewRunner() *Runner {
 	runner := &Runner{}
+	// FUNCTION TIME
+	runner.callFunctions.Store("now", funNow)
+	runner.callFunctions.Store("toDay", funToDay)
+	runner.callFunctions.Store("date", funDate)
+	runner.callFunctions.Store("addDate", funAddDate)
+	runner.callFunctions.Store("year", funYear)
+	runner.callFunctions.Store("month", funMonth)
+	runner.callFunctions.Store("day", funDay)
+	runner.callFunctions.Store("hour", funHour)
+	runner.callFunctions.Store("minute", funMinute)
+	runner.callFunctions.Store("second", funSecond)
+	runner.callFunctions.Store("millSecond", funMillSecond)
+	runner.callFunctions.Store("weekDay", funWeekDay)
+	runner.callFunctions.Store("timeFormat", funTimeFormat)
 	// FUNCTION MATH
 	runner.callFunctions.Store("abs", funAbs)
 	runner.callFunctions.Store("ceil", funCeil)
@@ -295,14 +310,8 @@ func (r *Runner) resolvePrefixUnaryExpression(ctx context.Context, expr *PrefixU
 
 func (r *Runner) resolvePlusUnaryExpression(v interface{}) (interface{}, error) {
 	switch n := v.(type) {
-	case int32:
-		return +n, nil
-	case int64:
-		return +n, nil
-	case float32:
-		return +n, nil
-	case float64:
-		return +n, nil
+	case decimal.Decimal:
+		return n, nil
 	default:
 		return nil, fmt.Errorf("unary expressin '+' not support type %T", v)
 	}
@@ -310,14 +319,8 @@ func (r *Runner) resolvePlusUnaryExpression(v interface{}) (interface{}, error) 
 
 func (r *Runner) resolveMinusUnaryExpression(v interface{}) (interface{}, error) {
 	switch n := v.(type) {
-	case int32:
-		return -n, nil
-	case int64:
-		return -n, nil
-	case float32:
-		return -n, nil
-	case float64:
-		return -n, nil
+	case decimal.Decimal:
+		return n.Neg(), nil
 	default:
 		return nil, fmt.Errorf("unary expressin '-' not support type %T", v)
 	}
@@ -334,10 +337,8 @@ func (r *Runner) resolveExclamationUnaryExpression(v interface{}) (interface{}, 
 
 func (r *Runner) resolveTildeUnaryExpression(v interface{}) (interface{}, error) {
 	switch n := v.(type) {
-	case int32:
-		return ^n, nil
-	case int64:
-		return ^n, nil
+	case decimal.Decimal:
+		return decimal.NewFromInt(^n.IntPart()), nil
 	default:
 		return nil, fmt.Errorf("unary expressin '~' not support type %T", v)
 	}
@@ -390,7 +391,6 @@ func (r *Runner) resolveBinaryExpression(ctx context.Context, expr *BinaryExpres
 	case SK_BarBar: // ||
 		return r.resolveBarBarBinaryExpression(v1, v2)
 	}
-
 	return nil, nil
 }
 
@@ -620,6 +620,61 @@ func (r *Runner) Get(key string) interface{} {
 }
 
 // CALL
+
+// FUNCTION DATE
+
+func funNow(ctx context.Context) (time.Time, error) {
+	return time.Now(), nil
+}
+
+func funToDay(ctx context.Context) (time.Time, error) {
+	now := time.Now()
+	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local), nil
+}
+
+func funDate(ctx context.Context, y, m, d decimal.Decimal) (time.Time, error) {
+	return time.Date(int(y.IntPart()), time.Month(int(m.IntPart())), int(d.IntPart()), 0, 0, 0, 0, time.Local), nil
+}
+
+func funAddDate(ctx context.Context, date time.Time, y, m, d decimal.Decimal) (time.Time, error) {
+	return date.AddDate(int(y.IntPart()), int(m.IntPart()), int(d.IntPart())), nil
+}
+
+func funYear(ctx context.Context, date time.Time) (decimal.Decimal, error) {
+	return decimal.NewFromInt(int64(date.Year())), nil
+}
+
+func funMonth(ctx context.Context, date time.Time) (decimal.Decimal, error) {
+	return decimal.NewFromInt(int64(date.Month())), nil
+}
+
+func funDay(ctx context.Context, date time.Time) (decimal.Decimal, error) {
+	return decimal.NewFromInt(int64(date.Day())), nil
+}
+
+func funHour(ctx context.Context, date time.Time) (decimal.Decimal, error) {
+	return decimal.NewFromInt(int64(date.Hour())), nil
+}
+
+func funMinute(ctx context.Context, date time.Time) (decimal.Decimal, error) {
+	return decimal.NewFromInt(int64(date.Minute())), nil
+}
+
+func funSecond(ctx context.Context, date time.Time) (decimal.Decimal, error) {
+	return decimal.NewFromInt(int64(date.Second())), nil
+}
+
+func funMillSecond(ctx context.Context, date time.Time) (decimal.Decimal, error) {
+	return decimal.NewFromInt(int64(date.UnixNano() / 1e6)), nil
+}
+
+func funWeekDay(ctx context.Context, date time.Time) (decimal.Decimal, error) {
+	return decimal.NewFromInt(int64(int(date.Weekday()))), nil
+}
+
+func funTimeFormat(ctx context.Context, date time.Time, layout string) (string, error) {
+	return date.Format(layout), nil
+}
 
 // FUNCTION MATH
 func funAbs(ctx context.Context, v decimal.Decimal) (decimal.Decimal, error) {

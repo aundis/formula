@@ -1,4 +1,4 @@
-module odata-filter
+module formula
 
 go 1.18
 

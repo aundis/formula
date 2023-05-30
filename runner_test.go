@@ -36,7 +36,7 @@ func TestExpr(t *testing.T) {
 
 func TestCallExpr(t *testing.T) {
 	ctx := context.Background()
-	code, err := ParseSourceCode([]byte("false ? upper(trim('abc')) : '啥东西'"))
+	code, err := ParseSourceCode([]byte("toDay()"))
 	if err != nil {
 		t.Error(err)
 		return

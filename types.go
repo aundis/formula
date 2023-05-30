@@ -75,73 +75,17 @@ const (
 	SK_TrueKeyword
 	SK_FalseKeyword
 	SK_NullKeyword
-	SK_InKeyword
-
-	// Function
-	// String and Collection Functions
-	SK_ConcatKeyword     // concat
-	SK_ContainsKeyword   // contains
-	SK_EndsWithKeyword   // endswith
-	SK_IndexOfKeyword    // indexof
-	SK_LengthKeyword     // length
-	SK_StartsWithKeyword // startwith
-	SK_SubStringKeyword  // substring
-
-	// Collection Functions
-	SK_HasSubSetKeyword      // hassubset
-	SK_HasSubsequenceKeyword // hassubsequence
-
-	// String Functions
-	SK_MatchesPatternKeyword // mathcespattern
-	SK_ToLowerKeyword        // tolower
-	SK_ToUpperKeyword        // toupper
-	SK_TrimKeyword           // tirm
-
-	// Date and Time Functions
-	SK_DayKeyword                // day
-	SK_DateKeyword               // date
-	SK_SecondKeyword             // second
-	SK_HourKeyword               // hour
-	SK_MaxDateTimeKeyword        // maxdate
-	SK_MinDateTimeKeyword        // mindate
-	SK_MinuteKkeyword            // minute
-	SK_MonthKeyword              // month
-	SK_NowKeyword                // now
-	SK_TimeKeyword               // time
-	SK_TotalOffsetMinutesKeyword // totaloffsetminutes
-	SK_TotalSecondsKeyword       // totalseconds
-	SK_YearKeyword               // year
-
-	// Arithmetic Functions
-	SK_CeilingKeyword // ceiling
-	SK_FloorKeyword   // floor
-	SK_RoundKeyword   // round
-
-	// Type Functions
-	// cast cast(ShipCountry,Edm.String)
-	// isof isof(NorthwindModel.Order)
-	// isof isof(ShipCountry,Edm.String)
-
-	// Geo Functions
-	// geo.distance geo.distance(CurrentPosition,TargetPosition)
-	// geo.intersects geo.intersects(Position,TargetArea)
-	// geo.length geo.length(DirectRoute)
-
-	// Conditional Functions
-	// case case(X gt 0:1,X lt 0:-1,true:0)
 
 	SK_Count
 	// Markers
 	SK_FirstKeyword        = SK_TrueKeyword
-	SK_LastKeyword         = SK_RoundKeyword
+	SK_LastKeyword         = SK_NullKeyword
 	SK_FirstPunctuation    = SK_OpenParen
 	SK_LastPunctuation     = SK_Comma
 	SK_FirstLiteral        = SK_NumberLiteral
 	SK_LastLiteral         = SK_StringLiteral
 	SK_FirstBinaryOperator = SK_LessThan
 	SK_LastBinaryOperator  = SK_BarBar
-	SK_FirstFunction       = SK_ConcatKeyword
-	SK_LastFunction        = SK_RoundKeyword
 )
 
 var tokens = [...]string{
@@ -152,59 +96,6 @@ var tokens = [...]string{
 	SK_CloseBracket: "]",
 	SK_Dot:          ".",
 	SK_Comma:        ",",
-
-	// Function
-	// String and Collection Functions
-	SK_ConcatKeyword:     "concat",
-	SK_ContainsKeyword:   "contains",
-	SK_EndsWithKeyword:   "endswith",
-	SK_IndexOfKeyword:    "indexof",
-	SK_LengthKeyword:     "length",
-	SK_StartsWithKeyword: "startwith",
-	SK_SubStringKeyword:  "substring",
-
-	// Collection Functions
-	SK_HasSubSetKeyword:      "hassubset",
-	SK_HasSubsequenceKeyword: "hassubsequence",
-
-	// String Functions
-	SK_MatchesPatternKeyword: "mathcespattern",
-	SK_ToLowerKeyword:        "tolower",
-	SK_ToUpperKeyword:        "toupper",
-	SK_TrimKeyword:           "tirm",
-
-	// Date and Time Functions
-	SK_DayKeyword:                "day",
-	SK_DateKeyword:               "date",
-	SK_SecondKeyword:             "second",
-	SK_HourKeyword:               "hour",
-	SK_MaxDateTimeKeyword:        "maxdate",
-	SK_MinDateTimeKeyword:        "mindate",
-	SK_MinuteKkeyword:            "minute",
-	SK_MonthKeyword:              "month",
-	SK_NowKeyword:                "now",
-	SK_TimeKeyword:               "time",
-	SK_TotalOffsetMinutesKeyword: "totaloffsetminutes",
-	SK_TotalSecondsKeyword:       "totalseconds",
-	SK_YearKeyword:               "year",
-
-	// Arithmetic Functions
-	SK_CeilingKeyword: "ceiling",
-	SK_FloorKeyword:   "floor",
-	SK_RoundKeyword:   "round",
-
-	// Type Functions
-	// cast cast(ShipCountry,Edm.String)
-	// isof isof(NorthwindModel.Order)
-	// isof isof(ShipCountry,Edm.String)
-
-	// Geo Functions
-	// geo.distance geo.distance(CurrentPosition,TargetPosition)
-	// geo.intersects geo.intersects(Position,TargetArea)
-	// geo.length geo.length(DirectRoute)
-
-	// Conditional Functions
-	// case case(X gt 0:1,X lt 0:-1,true:0)
 }
 
 func (tok SyntaxKind) IsKeyword() bool { return tok >= SK_FirstKeyword && tok <= SK_LastKeyword }
@@ -215,10 +106,6 @@ func (tok SyntaxKind) IsPunctuation() bool {
 
 func (tok SyntaxKind) IsBinaryOperator() bool {
 	return tok >= SK_FirstBinaryOperator && tok <= SK_LastBinaryOperator
-}
-
-func (tok SyntaxKind) IsFunctionKeyword() bool {
-	return tok >= SK_FirstFunction && tok <= SK_LastFunction
 }
 
 func (tok SyntaxKind) IsLiteral() bool { return tok >= SK_FirstLiteral && tok <= SK_LastLiteral }
