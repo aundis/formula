@@ -84,63 +84,50 @@ func FormatValue(v interface{}) (interface{}, error) {
 	}
 }
 
-// func ToInt(v interface{}) (int32, error) {
-// 	switch n := v.(type) {
-// 	case int:
-// 		return int32(n), nil
-// 	case int32:
-// 		return int32(n), nil
-// 	case int64:
-// 		return int32(n), nil
-// 	case float32:
-// 		return int32(n), nil
-// 	case float64:
-// 		return int32(n), nil
-// 	}
-// 	return 0, fmt.Errorf("ToInt not support type %T", v)
-// }
+func ToInt(v interface{}) (int, error) {
+	switch n := v.(type) {
+	case decimal.Decimal:
+		return int(n.IntPart()), nil
+	default:
+		return 0, fmt.Errorf("ToInt not support type %T", v)
+	}
+}
 
-// func ToLong(v interface{}) (int64, error) {
-// 	switch n := v.(type) {
-// 	case int32:
-// 		return int64(n), nil
-// 	case int64:
-// 		return int64(n), nil
-// 	case float32:
-// 		return int64(n), nil
-// 	case float64:
-// 		return int64(n), nil
-// 	}
-// 	return 0, fmt.Errorf("ToLong not support type %T", v)
-// }
+func ToInt32(v interface{}) (int32, error) {
+	switch n := v.(type) {
+	case decimal.Decimal:
+		return int32(n.IntPart()), nil
+	default:
+		return 0, fmt.Errorf("ToInt not support type %T", v)
+	}
+}
 
-// func ToFloat(v interface{}) (float32, error) {
-// 	switch n := v.(type) {
-// 	case int32:
-// 		return float32(n), nil
-// 	case int64:
-// 		return float32(n), nil
-// 	case float32:
-// 		return float32(n), nil
-// 	case float64:
-// 		return float32(n), nil
-// 	}
-// 	return 0, fmt.Errorf("ToFloat not support type %T", v)
-// }
+func ToInt64(v interface{}) (int64, error) {
+	switch n := v.(type) {
+	case decimal.Decimal:
+		return int64(n.IntPart()), nil
+	default:
+		return 0, fmt.Errorf("ToInt not support type %T", v)
+	}
+}
 
-// func ToDouble(v interface{}) (float64, error) {
-// 	switch n := v.(type) {
-// 	case int32:
-// 		return float64(n), nil
-// 	case int64:
-// 		return float64(n), nil
-// 	case float32:
-// 		return float64(n), nil
-// 	case float64:
-// 		return float64(n), nil
-// 	}
-// 	return 0, fmt.Errorf("ToDouble not support type %T", v)
-// }
+func ToFloat32(v interface{}) (float32, error) {
+	switch n := v.(type) {
+	case decimal.Decimal:
+		return float32(n.InexactFloat64()), nil
+	default:
+		return 0, fmt.Errorf("ToInt not support type %T", v)
+	}
+}
+
+func ToFloat64(v interface{}) (float64, error) {
+	switch n := v.(type) {
+	case decimal.Decimal:
+		return float64(n.InexactFloat64()), nil
+	default:
+		return 0, fmt.Errorf("ToInt not support type %T", v)
+	}
+}
 
 func ToString(v interface{}) (string, error) {
 	switch n := v.(type) {
