@@ -450,6 +450,8 @@ func (r *Runner) resolvePlusBinaryExpression(v1, v2 interface{}) (interface{}, e
 	switch v1.(type) {
 	case decimal.Decimal:
 		return v1.(decimal.Decimal).Add(v2.(decimal.Decimal)), nil
+	case string:
+		return v1.(string) + v2.(string), nil
 	default:
 		return nil, fmt.Errorf("binary expressin '+' not support type %T", v1)
 	}
