@@ -57,7 +57,7 @@ func ToNumber(v interface{}) (decimal.Decimal, error) {
 	case float64:
 		return decimal.NewFromInt(int64(n)), nil
 	default:
-		return decimal.Decimal{}, fmt.Errorf("ToInt not support type %T", v)
+		return decimal.Decimal{}, fmt.Errorf("ToNumber not support type %T", v)
 	}
 }
 
