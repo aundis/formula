@@ -1,10 +1,14 @@
 package formula
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/shopspring/decimal"
+)
 
 func IsNumber(v interface{}) bool {
 	switch v.(type) {
-	case int, int32, int64, float32, float64:
+	case decimal.Decimal:
 		return true
 	default:
 		return false
@@ -40,63 +44,80 @@ func IsString(v interface{}) bool {
 	return ok
 }
 
-func ToInt(v interface{}) (int32, error) {
+func ToNumber(v interface{}) (decimal.Decimal, error) {
 	switch n := v.(type) {
 	case int:
-		return int32(n), nil
+		return decimal.NewFromInt(int64(n)), nil
 	case int32:
-		return int32(n), nil
+		return decimal.NewFromInt(int64(n)), nil
 	case int64:
-		return int32(n), nil
+		return decimal.NewFromInt(int64(n)), nil
 	case float32:
-		return int32(n), nil
+		return decimal.NewFromInt(int64(n)), nil
 	case float64:
-		return int32(n), nil
+		return decimal.NewFromInt(int64(n)), nil
+	default:
+		return decimal.Decimal{}, fmt.Errorf("ToInt not support type %T", v)
 	}
-	return 0, fmt.Errorf("ToInt not support type %T", v)
 }
 
-func ToLong(v interface{}) (int64, error) {
-	switch n := v.(type) {
-	case int32:
-		return int64(n), nil
-	case int64:
-		return int64(n), nil
-	case float32:
-		return int64(n), nil
-	case float64:
-		return int64(n), nil
-	}
-	return 0, fmt.Errorf("ToLong not support type %T", v)
-}
+// func ToInt(v interface{}) (int32, error) {
+// 	switch n := v.(type) {
+// 	case int:
+// 		return int32(n), nil
+// 	case int32:
+// 		return int32(n), nil
+// 	case int64:
+// 		return int32(n), nil
+// 	case float32:
+// 		return int32(n), nil
+// 	case float64:
+// 		return int32(n), nil
+// 	}
+// 	return 0, fmt.Errorf("ToInt not support type %T", v)
+// }
 
-func ToFloat(v interface{}) (float32, error) {
-	switch n := v.(type) {
-	case int32:
-		return float32(n), nil
-	case int64:
-		return float32(n), nil
-	case float32:
-		return float32(n), nil
-	case float64:
-		return float32(n), nil
-	}
-	return 0, fmt.Errorf("ToFloat not support type %T", v)
-}
+// func ToLong(v interface{}) (int64, error) {
+// 	switch n := v.(type) {
+// 	case int32:
+// 		return int64(n), nil
+// 	case int64:
+// 		return int64(n), nil
+// 	case float32:
+// 		return int64(n), nil
+// 	case float64:
+// 		return int64(n), nil
+// 	}
+// 	return 0, fmt.Errorf("ToLong not support type %T", v)
+// }
 
-func ToDouble(v interface{}) (float64, error) {
-	switch n := v.(type) {
-	case int32:
-		return float64(n), nil
-	case int64:
-		return float64(n), nil
-	case float32:
-		return float64(n), nil
-	case float64:
-		return float64(n), nil
-	}
-	return 0, fmt.Errorf("ToDouble not support type %T", v)
-}
+// func ToFloat(v interface{}) (float32, error) {
+// 	switch n := v.(type) {
+// 	case int32:
+// 		return float32(n), nil
+// 	case int64:
+// 		return float32(n), nil
+// 	case float32:
+// 		return float32(n), nil
+// 	case float64:
+// 		return float32(n), nil
+// 	}
+// 	return 0, fmt.Errorf("ToFloat not support type %T", v)
+// }
+
+// func ToDouble(v interface{}) (float64, error) {
+// 	switch n := v.(type) {
+// 	case int32:
+// 		return float64(n), nil
+// 	case int64:
+// 		return float64(n), nil
+// 	case float32:
+// 		return float64(n), nil
+// 	case float64:
+// 		return float64(n), nil
+// 	}
+// 	return 0, fmt.Errorf("ToDouble not support type %T", v)
+// }
 
 func ToString(v interface{}) (string, error) {
 	switch n := v.(type) {
