@@ -2,6 +2,7 @@ package formula
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/shopspring/decimal"
 )
@@ -73,6 +74,8 @@ func FormatValue(v interface{}) (interface{}, error) {
 		return decimal.NewFromInt(int64(n)), nil
 	case float64:
 		return decimal.NewFromInt(int64(n)), nil
+	case time.Time:
+		return n, nil
 	case string:
 		return n, nil
 	case bool:
