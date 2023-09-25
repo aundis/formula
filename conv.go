@@ -62,7 +62,7 @@ func ToNumber(v interface{}) (decimal.Decimal, error) {
 	}
 }
 
-func FormatValue(v interface{}) (interface{}, error) {
+func formatInput(v interface{}) (interface{}, error) {
 	switch n := v.(type) {
 	case int:
 		return decimal.NewFromInt(int64(n)), nil
@@ -83,7 +83,7 @@ func FormatValue(v interface{}) (interface{}, error) {
 	case nil:
 		return nil, nil
 	default:
-		return decimal.Decimal{}, fmt.Errorf("FormatValue not support type %T", v)
+		return n, nil
 	}
 }
 

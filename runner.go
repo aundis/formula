@@ -68,6 +68,9 @@ func init() {
 	callFunctions.Store("replace", funReplace)
 	callFunctions.Store("trim", funTrim)
 	callFunctions.Store("regexp", funRegexp)
+	// UTILITIES
+	callFunctions.Store("mapToArr", funMapToArr)
+	callFunctions.Store("join", funJoin)
 }
 
 func NewRunner() *Runner {
@@ -90,29 +93,33 @@ type Runner struct {
 	SelectorExpressionResolver func(ctx context.Context, name string) (interface{}, error)
 }
 
-func (r *Runner) Resolve(ctx context.Context, v Expression) (interface{}, error) {
+func (r *Runner) Resolve(ctx context.Context, v Expression) (res interface{}, err error) {
 	switch n := v.(type) {
 	case *Identifier:
-		return r.resolveIdentifier(ctx, n)
+		res, err = r.resolveIdentifier(ctx, n)
 	case *PrefixUnaryExpression:
-		return r.resolvePrefixUnaryExpression(ctx, n)
+		res, err = r.resolvePrefixUnaryExpression(ctx, n)
 	case *BinaryExpression:
-		return r.resolveBinaryExpression(ctx, n)
+		res, err = r.resolveBinaryExpression(ctx, n)
 	case *ArrayLiteralExpression:
-		return r.resolveArrayLiteralExpression(ctx, n)
+		res, err = r.resolveArrayLiteralExpression(ctx, n)
 	case *ParenthesizedExpression:
-		return r.resolveParenthesizedExpression(ctx, n)
+		res, err = r.resolveParenthesizedExpression(ctx, n)
 	case *LiteralExpression:
-		return r.resolveLiteralExpression(ctx, n)
+		res, err = r.resolveLiteralExpression(ctx, n)
 	case *SelectorExpression:
-		return r.resolveSelectorExpression(ctx, n)
+		res, err = r.resolveSelectorExpression(ctx, n)
 	case *CallExpression:
-		return r.resolveCallExpression(ctx, n)
+		res, err = r.resolveCallExpression(ctx, n)
 	case *ConditionalExpression:
-		return r.resolveConditionalExpression(ctx, n)
+		res, err = r.resolveConditionalExpression(ctx, n)
 	default:
 		return nil, errors.New("unknown expression type")
 	}
+	if err != nil {
+		return nil, err
+	}
+	return formatInput(res)
 }
 
 func (r *Runner) resolveIdentifier(ctx context.Context, expr *Identifier) (interface{}, error) {
@@ -253,18 +260,20 @@ func hasVariadicParameter(funType reflect.Type) bool {
 
 func convTypeToTarget(source interface{}, target reflect.Type) (interface{}, error) {
 	switch target.Kind() {
-	case reflect.Struct:
-		return convStructToTarget(source, target)
-	case reflect.String:
-		return ToString(source)
-	case reflect.Bool:
-		return ToBool(source)
-	case reflect.Array, reflect.Slice:
-		return convArrayTypeToTarget(source, target)
 	case reflect.Interface:
 		return source, nil
+	case reflect.Array, reflect.Slice:
+		return convArrayTypeToTarget(source, target)
+	case reflect.Struct:
+		return convStructToTarget(source, target)
+	case reflect.Map:
+		return convMapToTarget(source, target)
 	default:
-		return nil, fmt.Errorf("convTypeToTarget not support type %v", target)
+		if reflect.ValueOf(source).CanConvert(target) {
+			return reflect.ValueOf(source).Convert(target).Interface(), nil
+		} else {
+			return nil, fmt.Errorf("convTypeToTarget %T not conv to %v", source, target)
+		}
 	}
 }
 
@@ -273,6 +282,27 @@ func convStructToTarget(source interface{}, target reflect.Type) (interface{}, e
 		return nil, fmt.Errorf("can't conv type %T to %T", source, target.String())
 	}
 	return source, nil
+}
+
+func convMapToTarget(source interface{}, target reflect.Type) (interface{}, error) {
+	st := reflect.TypeOf(source)
+	if st.Key() != target.Key() {
+		return nil, fmt.Errorf("convMapToTarget error map key type %T != %T", st.Key(), target.Key())
+	}
+
+	sv := reflect.ValueOf(source)
+	result := reflect.MakeMap(target)
+	iter := sv.MapRange()
+	for iter.Next() {
+		k := iter.Key()
+		v := iter.Value()
+		evalue, err := convTypeToTarget(v.Interface(), target.Elem())
+		if err != nil {
+			return nil, err
+		}
+		result.SetMapIndex(k, reflect.ValueOf(evalue))
+	}
+	return result.Interface(), nil
 }
 
 func convArrayTypeToTarget(source interface{}, target reflect.Type) (interface{}, error) {
@@ -860,4 +890,16 @@ func funTrim(ctx context.Context, s string) (string, error) {
 
 func funRegexp(ctx context.Context, s string, reg string) (bool, error) {
 	return regexp.MustCompile(reg).Match([]byte(s)), nil
+}
+
+func funMapToArr(ctx context.Context, m []map[string]any, key string) ([]any, error) {
+	var result []any
+	for _, v := range m {
+		result = append(result, v[key])
+	}
+	return result, nil
+}
+
+func funJoin(ctx context.Context, arr []string, join string) (string, error) {
+	return strings.Join(arr, join), nil
 }
