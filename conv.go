@@ -54,9 +54,9 @@ func ToNumber(v interface{}) (decimal.Decimal, error) {
 	case int64:
 		return decimal.NewFromInt(int64(n)), nil
 	case float32:
-		return decimal.NewFromInt(int64(n)), nil
+		return decimal.NewFromFloat32(n), nil
 	case float64:
-		return decimal.NewFromInt(int64(n)), nil
+		return decimal.NewFromFloat(n), nil
 	default:
 		return decimal.Decimal{}, fmt.Errorf("ToNumber not support type %T", v)
 	}
@@ -71,9 +71,9 @@ func formatInput(v interface{}) (interface{}, error) {
 	case int64:
 		return decimal.NewFromInt(int64(n)), nil
 	case float32:
-		return decimal.NewFromInt(int64(n)), nil
+		return decimal.NewFromFloat32(n), nil
 	case float64:
-		return decimal.NewFromInt(int64(n)), nil
+		return decimal.NewFromFloat(n), nil
 	case time.Time:
 		return n, nil
 	case string:
