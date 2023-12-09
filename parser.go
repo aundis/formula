@@ -581,7 +581,8 @@ func (p *Parser) isBinaryOperator() bool {
 
 func (p *Parser) getBinaryOperatorPrecedence() int {
 	switch p.token() {
-	case SK_BarBar:
+	case SK_BarBar,
+		SK_QuestionQuestion:
 		return 1
 	case SK_AmpersandAmpersand:
 		return 2
@@ -592,7 +593,9 @@ func (p *Parser) getBinaryOperatorPrecedence() int {
 	case SK_Ampersand:
 		return 5
 	case SK_EqualsEquals,
-		SK_ExclamationEquals:
+		SK_EqualsEqualsEquals,
+		SK_ExclamationEquals,
+		SK_ExclamationEqualsEquals:
 		return 6
 	case SK_LessThan,
 		SK_GreaterThan,
@@ -648,7 +651,8 @@ func (p *Parser) parseSimpleUnaryExpression() Expression {
 	case SK_Plus,
 		SK_Minus,
 		SK_Tilde,
-		SK_Exclamation:
+		SK_Exclamation,
+		SK_ExclamationExclamation:
 		return p.parsePrefixUnaryExpression()
 	default:
 		return p.parseLeftHandSideExpressionOrHigher()
@@ -672,11 +676,13 @@ func (p *Parser) parseMemberExpressionRest(expr Expression) Expression {
 			break
 		}
 
-		var dotToken = p.gotToken(SK_Dot)
-		if dotToken != nil {
+		dotToken := p.gotToken(SK_Dot)
+		exclamationDot := p.gotToken(SK_ExclamationDot)
+		if dotToken != nil || exclamationDot != nil {
 			var node = new(SelectorExpression)
 			node.Expression = expr
 			node.Name = p.parseRightSideOfDot()
+			node.Assert = exclamationDot != nil
 			expr = finishNode(p, node, expr.Pos())
 			continue
 		}
@@ -724,16 +730,13 @@ func (p *Parser) parseArgumentList() (*NodeList[Expression], *TokenNode) {
 
 func (p *Parser) parsePrimaryExpression() Expression {
 	switch p.token() {
-	case
-		// SK_IntLiteral,
-		// SK_LongLiteral,
-		// SK_FloatLiteral,
-		// SK_DoubleLiteral,
-		SK_NumberLiteral,
+	case SK_NumberLiteral,
 		SK_StringLiteral,
 		SK_NullKeyword,
 		SK_TrueKeyword,
-		SK_FalseKeyword:
+		SK_FalseKeyword,
+		SK_ThisKeyword,
+		SK_CtxKeyword:
 		return p.parseLiteralExpression()
 	case SK_OpenParen:
 		return p.parseParenthesizedExpression()

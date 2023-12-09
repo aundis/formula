@@ -476,8 +476,23 @@ func (s *Scanner) Scan() SyntaxKind {
 			continue
 		case '!':
 			if tar := s.peekEqual(1, '='); tar >= 0 {
+				if tar := s.peekEqual(2, '='); tar >= 0 {
+					s.pos = tar
+					s.token = SK_ExclamationEqualsEquals
+					return s.token
+				}
 				s.pos = tar
 				s.token = SK_ExclamationEquals
+				return s.token
+			}
+			if tar := s.peekEqual(1, '!'); tar >= 0 {
+				s.pos = tar
+				s.token = SK_ExclamationExclamation
+				return s.token
+			}
+			if tar := s.peekEqual(1, '.'); tar >= 0 {
+				s.pos = tar
+				s.token = SK_ExclamationDot
 				return s.token
 			}
 			s.pos += size
@@ -585,6 +600,11 @@ func (s *Scanner) Scan() SyntaxKind {
 			return s.token
 		case '=':
 			if tar := s.peekEqual(1, '='); tar >= 0 {
+				if tar := s.peekEqual(2, '='); tar >= 0 {
+					s.pos = tar
+					s.token = SK_EqualsEqualsEquals
+					return s.token
+				}
 				s.pos = tar
 				s.token = SK_EqualsEquals
 				return s.token
@@ -602,6 +622,11 @@ func (s *Scanner) Scan() SyntaxKind {
 			s.token = SK_GreaterThan
 			return s.token
 		case '?':
+			if tar := s.peekEqual(1, '?'); tar >= 0 {
+				s.pos = tar
+				s.token = SK_QuestionQuestion
+				return s.token
+			}
 			s.pos += size
 			s.token = SK_Question
 			return s.token

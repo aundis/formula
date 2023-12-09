@@ -24,9 +24,13 @@ func TestExpr(t *testing.T) {
 		return
 	}
 	runner := NewRunner()
-	_, err = runner.Resolve(ctx, code.Expression)
+	v, err := runner.Resolve(ctx, code.Expression)
 	if err != nil {
 		t.Error(err)
+		return
+	}
+	if v != float64(9) {
+		t.Error("except 9 but got ", v)
 		return
 	}
 }
@@ -54,8 +58,8 @@ func TestMapToArr(t *testing.T) {
 		return
 	}
 	runner := NewRunner()
-	runner.IdentifierResolver = func(ctx context.Context, name string) (interface{}, error) {
-		return []map[string]any{
+	runner.SetThis(map[string]any{
+		"value": []map[string]any{
 			{
 				"name": "小明",
 			},
@@ -65,8 +69,8 @@ func TestMapToArr(t *testing.T) {
 			{
 				"name": "小刚",
 			},
-		}, nil
-	}
+		},
+	})
 	v, err := runner.Resolve(ctx, code.Expression)
 	if err != nil {
 		t.Error(err)
@@ -76,4 +80,66 @@ func TestMapToArr(t *testing.T) {
 		t.Errorf("except %s, but got %v", "小明,小红,小刚", v)
 		return
 	}
+}
+func TestGetValue(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("person.age"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	runner.SetThis(map[string]interface{}{
+		"person": map[string]interface{}{
+			"age": 18,
+		},
+	})
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != float64(18) {
+		t.Error("except person.age = 18 but got", v)
+		return
+	}
+}
+
+func TestEqualEqual(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("true == 1"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	runner.SetThis(map[string]interface{}{})
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != true {
+		t.Error("except true but got", v)
+		return
+	}
+}
+
+func TestOutput(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("find('hello world', 'o') + 10"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	runner.SetThis(map[string]interface{}{
+		"age": 18,
+	})
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log(v)
 }

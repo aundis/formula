@@ -7,70 +7,72 @@ import (
 	"math"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/shopspring/decimal"
+	"github.com/ericlagergren/decimal"
 )
 
 const ctxKeyForRunner = "formulaRunner"
 
-var callFunctions sync.Map
+type M = map[string]interface{}
+
+var innerMap sync.Map
 
 func init() {
+	// BOOL
+	innerMap.Store("true", true)
+	innerMap.Store("false", false)
+
 	// FUNCTION TIME
-	callFunctions.Store("now", funNow)
-	callFunctions.Store("toDay", funToDay)
-	callFunctions.Store("date", funDate)
-	callFunctions.Store("addDate", funAddDate)
-	callFunctions.Store("year", funYear)
-	callFunctions.Store("month", funMonth)
-	callFunctions.Store("day", funDay)
-	callFunctions.Store("hour", funHour)
-	callFunctions.Store("minute", funMinute)
-	callFunctions.Store("second", funSecond)
-	callFunctions.Store("millSecond", funMillSecond)
-	callFunctions.Store("weekDay", funWeekDay)
-	callFunctions.Store("timeFormat", funTimeFormat)
+	innerMap.Store("now", funNow)
+	innerMap.Store("toDay", funToDay)
+	innerMap.Store("date", funDate)
+	innerMap.Store("addDate", funAddDate)
+	innerMap.Store("year", funYear)
+	innerMap.Store("month", funMonth)
+	innerMap.Store("day", funDay)
+	innerMap.Store("hour", funHour)
+	innerMap.Store("minute", funMinute)
+	innerMap.Store("second", funSecond)
+	innerMap.Store("millSecond", funMillSecond)
+	innerMap.Store("weekDay", funWeekDay)
+	innerMap.Store("timeFormat", funTimeFormat)
 	// FUNCTION MATH
-	callFunctions.Store("abs", funAbs)
-	callFunctions.Store("ceil", funCeil)
-	// runner.callFunctions.Store("min", funExp)
-	callFunctions.Store("floor", funFloor)
-	callFunctions.Store("ln", funLn)
-	callFunctions.Store("log", funLog)
-	callFunctions.Store("max", funMax)
-	callFunctions.Store("min", funMin)
-	callFunctions.Store("mod", funMod)
-	callFunctions.Store("round", funRound)
-	callFunctions.Store("roundBank", funRoundBank)
-	callFunctions.Store("roundCash", funRoundCash)
-	callFunctions.Store("roundCeil", funRoundCeil)
-	callFunctions.Store("roundDown", funRoundDown)
-	callFunctions.Store("roundFloor", funRoundFloor)
-	callFunctions.Store("roundUp", funRoundUp)
-	callFunctions.Store("sqrt", funSqrt)
+	innerMap.Store("abs", funAbs)
+	innerMap.Store("ceil", funCeil)
+	innerMap.Store("exp", funExp)
+	innerMap.Store("floor", funFloor)
+	innerMap.Store("ln", funLn)
+	innerMap.Store("log", funLog)
+	innerMap.Store("max", funMax)
+	innerMap.Store("min", funMin)
+	innerMap.Store("round", funRound)
+	innerMap.Store("roundBank", funRoundBank)
+	innerMap.Store("roundCash", funRoundCash)
+	innerMap.Store("sqrt", funSqrt)
 	// FUNCTION STRING
-	callFunctions.Store("startWith", funStartWith)
-	callFunctions.Store("endWith", funEndWith)
-	callFunctions.Store("contains", funContains)
-	callFunctions.Store("find", funFind)
-	callFunctions.Store("includes", funIncludes)
-	callFunctions.Store("left", funLeft)
-	callFunctions.Store("right", funRight)
-	callFunctions.Store("len", funLen)
-	callFunctions.Store("lower", funLower)
-	callFunctions.Store("upper", funUpper)
-	callFunctions.Store("lpad", funLpad)
-	callFunctions.Store("rpad", funRpad)
-	callFunctions.Store("mid", funMid)
-	callFunctions.Store("replace", funReplace)
-	callFunctions.Store("trim", funTrim)
-	callFunctions.Store("regexp", funRegexp)
+	innerMap.Store("startWith", funStartWith)
+	innerMap.Store("endWith", funEndWith)
+	innerMap.Store("contains", funContains)
+	innerMap.Store("find", funFind)
+	innerMap.Store("includes", funIncludes)
+	innerMap.Store("left", funLeft)
+	innerMap.Store("right", funRight)
+	innerMap.Store("len", funLen)
+	innerMap.Store("lower", funLower)
+	innerMap.Store("upper", funUpper)
+	innerMap.Store("lpad", funLpad)
+	innerMap.Store("rpad", funRpad)
+	innerMap.Store("mid", funMid)
+	innerMap.Store("replace", funReplace)
+	innerMap.Store("trim", funTrim)
+	innerMap.Store("regexp", funRegexp)
 	// UTILITIES
-	callFunctions.Store("mapToArr", funMapToArr)
-	callFunctions.Store("join", funJoin)
+	innerMap.Store("mapToArr", funMapToArr)
+	innerMap.Store("join", funJoin)
 }
 
 func NewRunner() *Runner {
@@ -88,12 +90,34 @@ func RunnerFromCtx(ctx context.Context) *Runner {
 }
 
 type Runner struct {
+	this                       map[string]interface{}
 	value                      map[string]interface{}
 	IdentifierResolver         func(ctx context.Context, name string) (interface{}, error)
 	SelectorExpressionResolver func(ctx context.Context, name string) (interface{}, error)
 }
 
-func (r *Runner) Resolve(ctx context.Context, v Expression) (res interface{}, err error) {
+func (r *Runner) SetThis(m map[string]interface{}) {
+	r.this = m
+}
+
+func (r *Runner) Resolve(ctx context.Context, v Expression) (interface{}, error) {
+	res, err := r.resolve(ctx, v)
+	if err != nil {
+		return nil, err
+	}
+	return try2Float64(res), nil
+}
+
+func try2Float64(v interface{}) interface{} {
+	switch n := v.(type) {
+	case *decimal.Big:
+		r, _ := n.Float64()
+		return r
+	}
+	return v
+}
+
+func (r *Runner) resolve(ctx context.Context, v Expression) (res interface{}, err error) {
 	switch n := v.(type) {
 	case *Identifier:
 		res, err = r.resolveIdentifier(ctx, n)
@@ -122,26 +146,63 @@ func (r *Runner) Resolve(ctx context.Context, v Expression) (res interface{}, er
 	return formatInput(res)
 }
 
-func (r *Runner) resolveIdentifier(ctx context.Context, expr *Identifier) (interface{}, error) {
-	switch expr.Value {
-	case "true":
-		return true, nil
-	case "false":
-		return false, nil
+func formatInput(v interface{}) (interface{}, error) {
+	switch n := v.(type) {
+	case int:
+		return new(decimal.Big).SetFloat64(float64(n)), nil
+	case int32:
+		return new(decimal.Big).SetFloat64(float64(n)), nil
+	case int64:
+		return new(decimal.Big).SetFloat64(float64(n)), nil
+	case float32:
+		return new(decimal.Big).SetFloat64(float64(n)), nil
+	case float64:
+		return new(decimal.Big).SetFloat64(float64(n)), nil
+	case time.Time:
+		return n, nil
+	case string:
+		return n, nil
+	case bool:
+		return n, nil
+	case nil:
+		return nil, nil
 	default:
-		ctx = context.WithValue(ctx, ctxKeyForRunner, r)
-		return r.IdentifierResolver(ctx, expr.Value)
+		return n, nil
 	}
 }
 
+func (r *Runner) resolveIdentifier(ctx context.Context, expr *Identifier) (interface{}, error) {
+	if v, ok := innerMap.Load(expr.Value); ok {
+		return v, nil
+	}
+	return r.this[expr.Value], nil
+}
+
 func (r *Runner) resolveSelectorExpression(ctx context.Context, expr *SelectorExpression) (interface{}, error) {
-	names, err := resolveSelecotrNames(expr)
+	v, err := r.resolve(ctx, expr.Expression)
 	if err != nil {
 		return nil, err
 	}
-	name := strings.Join(names, ".")
-	ctx = context.WithValue(ctx, ctxKeyForRunner, r)
-	return r.SelectorExpressionResolver(ctx, name)
+	if IsNull(v) && expr.Assert {
+		return nil, fmt.Errorf("expr %s value is null, can't access attribute '%s'", astToString(expr.Expression), expr.Name.Value)
+	}
+	return getObjectValueFromKey(v, expr.Name.Value)
+}
+
+func getObjectValueFromKey(v interface{}, key string) (interface{}, error) {
+	if IsNull(v) {
+		return nil, nil
+	}
+	rt := reflect.TypeOf(v)
+	rv := reflect.ValueOf(v)
+	switch rt.Kind() {
+	case reflect.Map:
+		return rv.MapIndex(reflect.ValueOf(key)).Interface(), nil
+	case reflect.Struct:
+		field := rv.FieldByName(key)
+		return field.Interface(), nil
+	}
+	return nil, nil
 }
 
 func resolveSelecotrNames(expr Expression) ([]string, error) {
@@ -160,6 +221,10 @@ func resolveSelecotrNames(expr Expression) ([]string, error) {
 }
 
 func (r *Runner) resolveCallExpression(ctx context.Context, expr *CallExpression) (interface{}, error) {
+	fun, err := r.resolve(ctx, expr.Expression)
+	if err != nil {
+		return nil, err
+	}
 	names, err := resolveCallNames(expr.Expression)
 	if err != nil {
 		return nil, err
@@ -169,18 +234,17 @@ func (r *Runner) resolveCallExpression(ctx context.Context, expr *CallExpression
 	var args []interface{}
 	if expr.Arguments != nil && expr.Arguments.Len() > 0 {
 		for i := 0; i < expr.Arguments.Len(); i++ {
-			av, err := r.Resolve(ctx, expr.Arguments.At(i))
+			av, err := r.resolve(ctx, expr.Arguments.At(i))
 			if err != nil {
 				return nil, err
 			}
 			args = append(args, av)
 		}
 	}
-	fun, ok := callFunctions.Load(name)
-	if !ok {
-		return nil, fmt.Errorf("not found call function '%s'", name)
-	}
 	funType := reflect.TypeOf(fun)
+	if funType.Kind() != reflect.Func {
+		return nil, fmt.Errorf("expr %s value not is function", name)
+	}
 	hasVariadic := hasVariadicParameter(funType)
 	// (...)可用性检查
 	if expr.DotDotDotToken != nil && !hasVariadic {
@@ -189,12 +253,12 @@ func (r *Runner) resolveCallExpression(ctx context.Context, expr *CallExpression
 	// 实参数量校验
 	paramCount := funType.NumIn()
 	if !hasVariadic || expr.DotDotDotToken != nil {
-		if len(args) != paramCount-1 {
-			return nil, fmt.Errorf("call function '%s' error: argument count except %d but got %d", name, paramCount-1, len(args))
+		if len(args) != paramCount {
+			return nil, fmt.Errorf("call function '%s' error: argument count except %d but got %d", name, paramCount, len(args))
 		}
 	} else {
-		if len(args) < paramCount-2 {
-			return nil, fmt.Errorf("call function '%s' error: argument count except greater than or equal %d but got %d", name, paramCount-2, len(args))
+		if len(args) < paramCount-1 {
+			return nil, fmt.Errorf("call function '%s' error: argument count except greater than or equal %d but got %d", name, paramCount-1, len(args))
 		}
 	}
 	// (...) 数组展开
@@ -206,14 +270,14 @@ func (r *Runner) resolveCallExpression(ctx context.Context, expr *CallExpression
 		args = append(args[:len(args)-1], expands...)
 	}
 	// 参数转换
-	callArgs := []reflect.Value{reflect.ValueOf(ctx)}
+	callArgs := []reflect.Value{}
 	for i := 0; i < len(args); i++ {
 		var targetType reflect.Type
-		if hasVariadic && i >= paramCount-2 {
+		if hasVariadic && i >= paramCount-1 {
 			targetType = funType.In(paramCount - 1)
 			targetType = targetType.Elem()
 		} else {
-			targetType = funType.In(i + 1)
+			targetType = funType.In(i)
 		}
 		convd, err := convTypeToTarget(args[i], targetType)
 		if err != nil {
@@ -271,10 +335,48 @@ func convTypeToTarget(source interface{}, target reflect.Type) (interface{}, err
 	default:
 		if reflect.ValueOf(source).CanConvert(target) {
 			return reflect.ValueOf(source).Convert(target).Interface(), nil
-		} else {
-			return nil, fmt.Errorf("convTypeToTarget %T not conv to %v", source, target)
+		}
+		if isBasicNumberKind(target.Kind()) {
+			return convToBasicNumber(source, target)
+		}
+		return nil, fmt.Errorf("convTypeToTarget %T not conv to %v", source, target)
+	}
+}
+
+var basicNumberKind = []reflect.Kind{reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int, reflect.Float32, reflect.Float64}
+
+func isBasicNumberKind(kind reflect.Kind) bool {
+	for _, k := range basicNumberKind {
+		if k == kind {
+			return true
 		}
 	}
+	return false
+}
+
+func convToBasicNumber(source interface{}, target reflect.Type) (interface{}, error) {
+	if v, ok := source.(*decimal.Big); ok {
+		f, _ := v.Float64()
+		switch target.Kind() {
+		case reflect.Int8:
+			return int8(f), nil
+		case reflect.Int16:
+			return int16(f), nil
+		case reflect.Int:
+			return int(f), nil
+		case reflect.Int32:
+			return int32(f), nil
+		case reflect.Int64:
+			return int64(f), nil
+		case reflect.Float32:
+			return float32(f), nil
+		case reflect.Float64:
+			return float64(f), nil
+		default:
+			return nil, fmt.Errorf("convToBasicNumber %v not number target", target)
+		}
+	}
+	return nil, fmt.Errorf("convToBasicNumber %T not decimal.Big", source)
 }
 
 func convStructToTarget(source interface{}, target reflect.Type) (interface{}, error) {
@@ -337,7 +439,7 @@ func resolveCallNames(expr Expression) ([]string, error) {
 }
 
 func (r *Runner) resolvePrefixUnaryExpression(ctx context.Context, expr *PrefixUnaryExpression) (interface{}, error) {
-	v, err := r.Resolve(ctx, expr.Operand)
+	v, err := r.resolve(ctx, expr.Operand)
 	if err != nil {
 		return nil, err
 	}
@@ -350,14 +452,24 @@ func (r *Runner) resolvePrefixUnaryExpression(ctx context.Context, expr *PrefixU
 		return r.resolveExclamationUnaryExpression(v)
 	case SK_Tilde:
 		return r.resolveTildeUnaryExpression(v)
+	case SK_ExclamationExclamation:
+		return r.resolveExclamationExclamationUnaryExpression(v)
 	}
 	return nil, errors.New("unknown unary expression")
 }
 
 func (r *Runner) resolvePlusUnaryExpression(v interface{}) (interface{}, error) {
 	switch n := v.(type) {
-	case decimal.Decimal:
+	case *decimal.Big:
 		return n, nil
+	case string:
+		r, err := strconv.Atoi(n)
+		if err != nil {
+			return math.NaN(), nil
+		}
+		return r, nil
+	case map[string]any:
+		return math.NaN(), nil
 	default:
 		return nil, fmt.Errorf("unary expressin '+' not support type %T", v)
 	}
@@ -365,8 +477,16 @@ func (r *Runner) resolvePlusUnaryExpression(v interface{}) (interface{}, error) 
 
 func (r *Runner) resolveMinusUnaryExpression(v interface{}) (interface{}, error) {
 	switch n := v.(type) {
-	case decimal.Decimal:
-		return n.Neg(), nil
+	case *decimal.Big:
+		return new(decimal.Big).Neg(n), nil
+	case string:
+		r, err := strconv.Atoi(n)
+		if err != nil {
+			return math.NaN(), nil
+		}
+		return -r, nil
+	case map[string]any:
+		return math.NaN(), nil
 	default:
 		return nil, fmt.Errorf("unary expressin '-' not support type %T", v)
 	}
@@ -381,26 +501,28 @@ func (r *Runner) resolveExclamationUnaryExpression(v interface{}) (interface{}, 
 	}
 }
 
+func (r *Runner) resolveExclamationExclamationUnaryExpression(v interface{}) (interface{}, error) {
+	return r.toBool(v), nil
+}
+
 func (r *Runner) resolveTildeUnaryExpression(v interface{}) (interface{}, error) {
 	switch n := v.(type) {
-	case decimal.Decimal:
-		return decimal.NewFromInt(^n.IntPart()), nil
+	case *decimal.Big:
+		iv, _ := n.Int64()
+		return new(decimal.Big).SetUint64(uint64(iv)), nil
 	default:
 		return nil, fmt.Errorf("unary expressin '~' not support type %T", v)
 	}
 }
 
 func (r *Runner) resolveBinaryExpression(ctx context.Context, expr *BinaryExpression) (interface{}, error) {
-	v1, err := r.Resolve(ctx, expr.Left)
+	v1, err := r.resolve(ctx, expr.Left)
 	if err != nil {
 		return nil, err
 	}
-	v2, err := r.Resolve(ctx, expr.Right)
+	v2, err := r.resolve(ctx, expr.Right)
 	if err != nil {
 		return nil, err
-	}
-	if reflect.TypeOf(v1) != reflect.TypeOf(v2) {
-		return nil, fmt.Errorf("binary expression error: except expr1 type = expr2 type, but got %T !=  %T", v1, v2)
 	}
 
 	switch expr.Operator.Token {
@@ -430,8 +552,12 @@ func (r *Runner) resolveBinaryExpression(ctx context.Context, expr *BinaryExpres
 		return r.resolveCaretBinaryExpression(v1, v2)
 	case SK_EqualsEquals: // ==
 		return r.resolveEqualsEqualsBinaryExpression(expr, v1, v2)
-	case SK_ExclamationEquals: // !
+	case SK_ExclamationEquals: // !=
 		return r.resolveNotEqualsBinaryExpression(expr, v1, v2)
+	case SK_EqualsEqualsEquals:
+		return r.resolveEqualsEqualsEqualsBinaryExpression(expr, v1, v2)
+	case SK_ExclamationEqualsEquals:
+		return r.resolveNotEqualsEqualsBinaryExpression(expr, v1, v2)
 	case SK_AmpersandAmpersand: // &&
 		return r.resolveAmpersandAmpersandBinaryExpression(v1, v2)
 	case SK_BarBar: // ||
@@ -442,161 +568,189 @@ func (r *Runner) resolveBinaryExpression(ctx context.Context, expr *BinaryExpres
 
 func (r *Runner) resolveLessThanBinaryExpressino(v1, v2 interface{}) (interface{}, error) {
 	switch v1.(type) {
-	case decimal.Decimal:
-		return v1.(decimal.Decimal).LessThan(v2.(decimal.Decimal)), nil
+	case string:
+		s1 := r.toString(v1)
+		s2 := r.toString(v2)
+		return s1 < s2, nil
 	default:
-		return nil, fmt.Errorf("binary expression '<' not support type %T", v1)
+		n1 := r.toNumber(v1)
+		n2 := r.toNumber(v2)
+		return n1.Cmp(n2) == -1, nil
 	}
 }
 
 func (r *Runner) resolveGreaterThanBinaryExpressino(v1, v2 interface{}) (interface{}, error) {
 	switch v1.(type) {
-	case decimal.Decimal:
-		return v1.(decimal.Decimal).GreaterThan(v2.(decimal.Decimal)), nil
+	case string:
+		s1 := r.toString(v1)
+		s2 := r.toString(v2)
+		return s1 > s2, nil
 	default:
-		return nil, fmt.Errorf("binary expressin '>' not support type %T", v1)
+		n1 := r.toNumber(v1)
+		n2 := r.toNumber(v2)
+		return n1.Cmp(n2) == 1, nil
 	}
 }
 
 func (r *Runner) resolveLessThanEqualsBinaryExpressino(v1, v2 interface{}) (interface{}, error) {
 	switch v1.(type) {
-	case decimal.Decimal:
-		return v1.(decimal.Decimal).LessThanOrEqual(v2.(decimal.Decimal)), nil
+	case string:
+		s1 := r.toString(v1)
+		s2 := r.toString(v2)
+		return s1 <= s2, nil
 	default:
-		return nil, fmt.Errorf("binary expression '<=' not support type %T", v1)
+		n1 := r.toNumber(v1)
+		n2 := r.toNumber(v2)
+		return n1.Cmp(n2) <= 0, nil
 	}
 }
 
 func (r *Runner) resolveGreaterThanEqualsBinaryExpressino(v1, v2 interface{}) (interface{}, error) {
 	switch v1.(type) {
-	case decimal.Decimal:
-		return v1.(decimal.Decimal).GreaterThanOrEqual(v2.(decimal.Decimal)), nil
+	case string:
+		s1 := r.toString(v1)
+		s2 := r.toString(v2)
+		return s1 >= s2, nil
 	default:
-		return nil, fmt.Errorf("binary expression '>=' not support type %T", v1)
+		n1 := r.toNumber(v1)
+		n2 := r.toNumber(v2)
+		return n1.Cmp(n2) >= 0, nil
 	}
 }
 
 func (r *Runner) resolvePlusBinaryExpression(v1, v2 interface{}) (interface{}, error) {
 	switch v1.(type) {
-	case decimal.Decimal:
-		return v1.(decimal.Decimal).Add(v2.(decimal.Decimal)), nil
 	case string:
-		return v1.(string) + v2.(string), nil
+		s1 := r.toString(v1)
+		s2 := r.toString(v2)
+		return s1 + s2, nil
 	default:
-		return nil, fmt.Errorf("binary expressin '+' not support type %T", v1)
+		n1 := r.toNumber(v1)
+		n2 := r.toNumber(v2)
+		return new(decimal.Big).Add(n1, n2), nil
 	}
 }
 
 func (r *Runner) resolveMinusBinaryExpressino(v1, v2 interface{}) (interface{}, error) {
 	switch v1.(type) {
-	case decimal.Decimal:
-		return v1.(decimal.Decimal).Sub(v2.(decimal.Decimal)), nil
+	case string:
+		s1 := r.toString(v1)
+		s2 := r.toString(v2)
+		return s1 + s2, nil
 	default:
-		return nil, fmt.Errorf("binary expression '-' not support type %T", v1)
+		n1 := r.toNumber(v1)
+		n2 := r.toNumber(v2)
+		return new(decimal.Big).Sub(n1, n2), nil
 	}
 }
 
 func (r *Runner) resolveAsteriskBinaryExpressino(v1, v2 interface{}) (interface{}, error) {
-	switch v1.(type) {
-	case decimal.Decimal:
-		return v1.(decimal.Decimal).Mul(v2.(decimal.Decimal)), nil
-	default:
-		return nil, fmt.Errorf("binary expression '*' not support type %T", v1)
-	}
+	n1 := r.toNumber(v1)
+	n2 := r.toNumber(v2)
+	return new(decimal.Big).Mul(n1, n2), nil
 }
 
 func (r *Runner) resolveSlashBinaryExpression(v1, v2 interface{}) (interface{}, error) {
-	switch v1.(type) {
-	case decimal.Decimal:
-		return v1.(decimal.Decimal).Div(v2.(decimal.Decimal)), nil
-	default:
-		return nil, fmt.Errorf("binary expression '/' error: left or right expression type(%T) not support", v1)
-	}
+	n1 := r.toNumber(v1)
+	n2 := r.toNumber(v2)
+	return new(decimal.Big).Quo(n1, n2), nil
 }
 
 func (r *Runner) resolvePercentBinaryExpression(v1, v2 interface{}) (interface{}, error) {
-	switch v1.(type) {
-	case decimal.Decimal:
-		return v1.(decimal.Decimal).Mod(v2.(decimal.Decimal)), nil
-	default:
-		return nil, fmt.Errorf("binary expression '%s' error: left or right expression type(%T) not support", "%", v1)
-	}
+	n1 := r.toNumber(v1)
+	n2 := r.toNumber(v2)
+	return new(decimal.Big).Rem(n1, n2), nil
 }
 
 func (r *Runner) resolveAmpersandBinaryExpression(v1, v2 interface{}) (interface{}, error) {
-	switch v1.(type) {
-	case decimal.Decimal:
-		int1 := v1.(decimal.Decimal).IntPart()
-		int2 := v2.(decimal.Decimal).IntPart()
-		return decimal.NewFromInt(int1 & int2), nil
-	default:
-		return nil, fmt.Errorf("binary expression '&' error: left or right expression type(%T) not support", v1)
-	}
+	i1, _ := r.toNumber(v1).Int64()
+	i2, _ := r.toNumber(v2).Int64()
+	return new(decimal.Big).SetFloat64(float64(i1 & i2)), nil
 }
 
 func (r *Runner) resolveBarBinaryExpression(v1, v2 interface{}) (interface{}, error) {
-	switch v1.(type) {
-	case decimal.Decimal:
-		int1 := v1.(decimal.Decimal).IntPart()
-		int2 := v2.(decimal.Decimal).IntPart()
-		return decimal.NewFromInt(int1 | int2), nil
-	default:
-		return nil, fmt.Errorf("binary expression '|' error: left or right expression type(%T) not support", v1)
-	}
+	i1, _ := r.toNumber(v1).Int64()
+	i2, _ := r.toNumber(v2).Int64()
+	return new(decimal.Big).SetFloat64(float64(i1 | i2)), nil
 }
 
 func (r *Runner) resolveCaretBinaryExpression(v1, v2 interface{}) (interface{}, error) {
-	switch v1.(type) {
-	case decimal.Decimal:
-		int1 := v1.(decimal.Decimal).IntPart()
-		int2 := v2.(decimal.Decimal).IntPart()
-		return decimal.NewFromInt(int1 ^ int2), nil
-	default:
-		return nil, fmt.Errorf("binary expression '^' error: left or right expression type(%T) not support", v1)
-	}
+	i1, _ := r.toNumber(v1).Int64()
+	i2, _ := r.toNumber(v2).Int64()
+	return new(decimal.Big).SetFloat64(float64(i1 ^ i2)), nil
 }
 
 func (r *Runner) resolveEqualsEqualsBinaryExpression(expr *BinaryExpression, v1, v2 interface{}) (interface{}, error) {
-	switch v1.(type) {
-	case decimal.Decimal:
-		return v1.(decimal.Decimal).Equal(v2.(decimal.Decimal)), nil
-	case bool:
-		return v1.(bool) == v2.(bool), nil
-	case string:
-		return v1.(string) == v2.(string), nil
-	default:
-		return nil, fmt.Errorf("binary expression '!=' error: left or right expression type(%T) not support", v1)
-	}
+	return r.valueLikeEqualTo(v1, v2), nil
 }
 
 func (r *Runner) resolveNotEqualsBinaryExpression(expr *BinaryExpression, v1, v2 interface{}) (interface{}, error) {
+	return !r.valueLikeEqualTo(v1, v2), nil
+}
+
+func (r *Runner) valueLikeEqualTo(v1, v2 interface{}) bool {
 	switch v1.(type) {
-	case decimal.Decimal:
-		return !v1.(decimal.Decimal).Equal(v2.(decimal.Decimal)), nil
+	case *decimal.Big:
+		n1 := r.toNumber(v1)
+		n2 := r.toNumber(v2)
+		return n1.Cmp(n2) == 0
 	case bool:
-		return v1.(bool) != v2.(bool), nil
+		n1 := r.toNumber(v1)
+		n2 := r.toNumber(v2)
+		return n1.Cmp(n2) == 0
 	case string:
-		return v1.(string) != v2.(string), nil
+		s1 := r.toString(v1)
+		s2 := r.toString(v2)
+		return s1 == s2
 	default:
-		return nil, fmt.Errorf("binary expression '!=' error: left or right expression type(%T) not support", v1)
+		return IsNull(v1) && IsNull(v2) || v1 == v2
 	}
 }
 
+func (r *Runner) resolveEqualsEqualsEqualsBinaryExpression(expr *BinaryExpression, v1, v2 interface{}) (interface{}, error) {
+	return !r.valueEqualTo(v1, v2), nil
+}
+
+func (r *Runner) resolveNotEqualsEqualsBinaryExpression(expr *BinaryExpression, v1, v2 interface{}) (interface{}, error) {
+	return !r.valueEqualTo(v1, v2), nil
+}
+
+func (r *Runner) valueEqualTo(v1, v2 interface{}) bool {
+	if IsNull(v1) && IsNull(v2) || v1 == v2 {
+		return true
+	}
+	if reflect.TypeOf(v1) == reflect.TypeOf(v2) {
+		switch v1.(type) {
+		case *decimal.Big:
+			n1 := v1.(*decimal.Big)
+			n2 := v2.(*decimal.Big)
+			return n1.Cmp(n2) == 0
+		case bool:
+			n1 := v1.(bool)
+			n2 := v2.(bool)
+			return n1 == n2
+		case string:
+			s1 := v1.(string)
+			s2 := v2.(string)
+			return s1 == s2
+		}
+	}
+	return false
+}
+
 func (r *Runner) resolveAmpersandAmpersandBinaryExpression(v1, v2 interface{}) (interface{}, error) {
-	switch v1.(type) {
-	case bool:
-		return v1.(bool) && v2.(bool), nil
-	default:
-		return nil, fmt.Errorf("binary expression '&&' error: left or right expression type(%T) not support", v1)
+	if r.toBool(v1) {
+		return v2, nil
+	} else {
+		return v1, nil
 	}
 }
 
 func (r *Runner) resolveBarBarBinaryExpression(v1, v2 interface{}) (interface{}, error) {
-	switch v1.(type) {
-	case bool:
-		return v1.(bool) || v2.(bool), nil
-	default:
-		return nil, fmt.Errorf("binary expression '||' error: left or right expression type(%T) not support", v1)
+	if !r.toBool(v1) {
+		return v2, nil
+	} else {
+		return v1, nil
 	}
 }
 
@@ -605,7 +759,7 @@ func (r *Runner) resolveArrayLiteralExpression(ctx context.Context, expr *ArrayL
 	if expr.Elements != nil && expr.Elements.Len() > 0 {
 		for i := 0; i < expr.Elements.Len(); i++ {
 			item := expr.Elements.At(i)
-			v1, err := r.Resolve(ctx, item)
+			v1, err := r.resolve(ctx, item)
 			if err != nil {
 				return nil, err
 			}
@@ -616,7 +770,7 @@ func (r *Runner) resolveArrayLiteralExpression(ctx context.Context, expr *ArrayL
 }
 
 func (r *Runner) resolveParenthesizedExpression(ctx context.Context, expr *ParenthesizedExpression) (interface{}, error) {
-	v, err := r.Resolve(ctx, expr.Expression)
+	v, err := r.resolve(ctx, expr.Expression)
 	if err != nil {
 		return nil, err
 	}
@@ -625,8 +779,22 @@ func (r *Runner) resolveParenthesizedExpression(ctx context.Context, expr *Paren
 
 func (r *Runner) resolveLiteralExpression(ctx context.Context, expr *LiteralExpression) (interface{}, error) {
 	switch expr.Token {
+	case SK_TrueKeyword:
+		return true, nil
+	case SK_FalseKeyword:
+		return false, nil
+	case SK_NullKeyword:
+		return nil, nil
+	case SK_ThisKeyword:
+		return r.this, nil
+	case SK_CtxKeyword:
+		return ctx, nil
 	case SK_NumberLiteral:
-		return decimal.NewFromString(expr.Value)
+		r, ok := new(decimal.Big).SetString(expr.Value)
+		if !ok {
+			return nil, fmt.Errorf("%s not number literal", expr.Value)
+		}
+		return r, nil
 	case SK_StringLiteral:
 		return r.resolveStringLiteralExpression(expr)
 	}
@@ -638,25 +806,74 @@ func (r *Runner) resolveStringLiteralExpression(expr *LiteralExpression) (interf
 }
 
 func (r *Runner) resolveConditionalExpression(ctx context.Context, expr *ConditionalExpression) (interface{}, error) {
-	cond, err := r.Resolve(ctx, expr.Condition)
+	cond, err := r.resolve(ctx, expr.Condition)
 	if err != nil {
 		return nil, err
 	}
-	if !IsBoolean(cond) {
-		return nil, errors.New("condition result value type not boolean")
-	}
-	if cond.(bool) {
-		v, err := r.Resolve(ctx, expr.WhenTrue)
+	// if !IsBoolean(cond) {
+	// 	return nil, errors.New("condition result value type not boolean")
+	// }
+	if r.toBool(cond) {
+		v, err := r.resolve(ctx, expr.WhenTrue)
 		if err != nil {
 			return nil, err
 		}
 		return v, nil
 	} else {
-		v, err := r.Resolve(ctx, expr.WhenFalse)
+		v, err := r.resolve(ctx, expr.WhenFalse)
 		if err != nil {
 			return nil, err
 		}
 		return v, nil
+	}
+}
+
+func (r *Runner) toString(v interface{}) string {
+	switch n := v.(type) {
+	case string:
+		return n
+	case *decimal.Big:
+		return n.String()
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+func (r *Runner) toNumber(v interface{}) *decimal.Big {
+	switch n := v.(type) {
+	case *decimal.Big:
+		return n
+	case string:
+		r, ok := new(decimal.Big).SetString(n)
+		if !ok {
+			return new(decimal.Big).SetNaN(true)
+		}
+		return r
+	case bool:
+		if n {
+			return new(decimal.Big).SetUint64(1)
+		} else {
+			return new(decimal.Big).SetUint64(0)
+		}
+	default:
+		if IsNull(v) {
+			return new(decimal.Big).SetUint64(0)
+		} else {
+			return new(decimal.Big).SetNaN(true)
+		}
+	}
+}
+
+func (r *Runner) toBool(v interface{}) bool {
+	switch n := v.(type) {
+	case bool:
+		return n
+	case string:
+		return len(n) > 0
+	case *decimal.Big:
+		return n.Cmp(new(decimal.Big).SetUint64(0)) != 0 && !n.IsNaN(0)
+	default:
+		return !IsNull(v)
 	}
 }
 
@@ -672,152 +889,161 @@ func (r *Runner) Get(key string) interface{} {
 
 // FUNCTION DATE
 
-func funNow(ctx context.Context) (time.Time, error) {
+func funNow() (time.Time, error) {
 	return time.Now(), nil
 }
 
-func funToDay(ctx context.Context) (time.Time, error) {
+func funToDay() (time.Time, error) {
 	now := time.Now()
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local), nil
 }
 
-func funDate(ctx context.Context, y, m, d decimal.Decimal) (time.Time, error) {
-	return time.Date(int(y.IntPart()), time.Month(int(m.IntPart())), int(d.IntPart()), 0, 0, 0, 0, time.Local), nil
+func funDate(y, m, d int) (time.Time, error) {
+	return time.Date(y, time.Month(m), d, 0, 0, 0, 0, time.Local), nil
 }
 
-func funAddDate(ctx context.Context, date time.Time, y, m, d decimal.Decimal) (time.Time, error) {
-	return date.AddDate(int(y.IntPart()), int(m.IntPart()), int(d.IntPart())), nil
+func funAddDate(date time.Time, y, m, d int) (time.Time, error) {
+	return date.AddDate(y, m, d), nil
 }
 
-func funYear(ctx context.Context, date time.Time) (decimal.Decimal, error) {
-	return decimal.NewFromInt(int64(date.Year())), nil
+func funYear(date time.Time) (int, error) {
+	return date.Year(), nil
 }
 
-func funMonth(ctx context.Context, date time.Time) (decimal.Decimal, error) {
-	return decimal.NewFromInt(int64(date.Month())), nil
+func funMonth(date time.Time) (int, error) {
+	return int(date.Month()), nil
 }
 
-func funDay(ctx context.Context, date time.Time) (decimal.Decimal, error) {
-	return decimal.NewFromInt(int64(date.Day())), nil
+func funDay(date time.Time) (int, error) {
+	return date.Day(), nil
 }
 
-func funHour(ctx context.Context, date time.Time) (decimal.Decimal, error) {
-	return decimal.NewFromInt(int64(date.Hour())), nil
+func funHour(date time.Time) (int, error) {
+	return date.Hour(), nil
 }
 
-func funMinute(ctx context.Context, date time.Time) (decimal.Decimal, error) {
-	return decimal.NewFromInt(int64(date.Minute())), nil
+func funMinute(date time.Time) (int, error) {
+	return date.Minute(), nil
 }
 
-func funSecond(ctx context.Context, date time.Time) (decimal.Decimal, error) {
-	return decimal.NewFromInt(int64(date.Second())), nil
+func funSecond(date time.Time) (int, error) {
+	return date.Second(), nil
 }
 
-func funMillSecond(ctx context.Context, date time.Time) (decimal.Decimal, error) {
-	return decimal.NewFromInt(int64(date.UnixNano() / 1e6)), nil
+func funMillSecond(date time.Time) (int64, error) {
+	return date.UnixNano() / 1e6, nil
 }
 
-func funWeekDay(ctx context.Context, date time.Time) (decimal.Decimal, error) {
-	return decimal.NewFromInt(int64(int(date.Weekday()))), nil
+func funWeekDay(date time.Time) (int, error) {
+	return int(date.Weekday()), nil
 }
 
-func funTimeFormat(ctx context.Context, date time.Time, layout string) (string, error) {
+func funTimeFormat(date time.Time, layout string) (string, error) {
 	return date.Format(layout), nil
 }
 
 // FUNCTION MATH
-func funAbs(ctx context.Context, v decimal.Decimal) (decimal.Decimal, error) {
-	return v.Abs(), nil
+func funAbs(v *decimal.Big) (*decimal.Big, error) {
+	return new(decimal.Big).Abs(v), nil
 }
 
-func funCeil(ctx context.Context, v decimal.Decimal) (decimal.Decimal, error) {
-	return v.Ceil(), nil
+func funCeil(v *decimal.Big) (*decimal.Big, error) {
+	result := new(decimal.Big)
+	decimal.Context64.Ceil(result, v)
+	return result, nil
 }
 
-// func funExp(ctx context.Context, v decimal.Decimal) (decimal.Decimal, error) {
-// 	return v.Exponent(), nil
-// }
-
-func funFloor(ctx context.Context, v decimal.Decimal) (decimal.Decimal, error) {
-	return v.Floor(), nil
+func funExp(v *decimal.Big) (*decimal.Big, error) {
+	result := new(decimal.Big)
+	decimal.Context64.Exp(result, v)
+	return result, nil
 }
 
-func funLn(ctx context.Context, v decimal.Decimal) (decimal.Decimal, error) {
-	return decimal.NewFromFloat(math.Log(v.InexactFloat64())), nil
+func funFloor(v *decimal.Big) (*decimal.Big, error) {
+	result := new(decimal.Big)
+	decimal.Context64.Floor(result, v)
+	return result, nil
 }
 
-func funLog(ctx context.Context, v decimal.Decimal) (decimal.Decimal, error) {
-	return decimal.NewFromFloat(math.Log10(v.InexactFloat64())), nil
+func funLn(v *decimal.Big) (*decimal.Big, error) {
+	result := new(decimal.Big)
+	decimal.Context64.Log(result, v)
+	return result, nil
 }
 
-func funMax(ctx context.Context, nums ...decimal.Decimal) (decimal.Decimal, error) {
+func funLog(v *decimal.Big) (*decimal.Big, error) {
+	result := new(decimal.Big)
+	decimal.Context64.Log10(result, v)
+	return result, nil
+}
+
+func funMax(nums ...*decimal.Big) (*decimal.Big, error) {
 	if len(nums) == 0 {
-		return decimal.Zero, errors.New("please input numbers")
+		return nil, errors.New("please input numbers")
 	}
-	return decimal.Max(nums[0], nums[1:]...), nil
+	max := nums[0]
+	for _, v := range nums {
+		if v.Cmp(max) > 0 {
+			max = v
+		}
+	}
+	return max, nil
 }
 
-func funMin(ctx context.Context, nums ...decimal.Decimal) (decimal.Decimal, error) {
+func funMin(nums ...*decimal.Big) (*decimal.Big, error) {
 	if len(nums) == 0 {
-		return decimal.Zero, errors.New("please input numbers")
+		return nil, errors.New("please input numbers")
 	}
-	return decimal.Min(nums[0], nums[1:]...), nil
+	return decimal.Min(nums...), nil
 }
 
-func funMod(ctx context.Context, a, b decimal.Decimal) (decimal.Decimal, error) {
-	return a.Mod(b), nil
+func funRound(v *decimal.Big) (*decimal.Big, error) {
+	return new(decimal.Big).Round(0), nil
 }
 
-func funRound(ctx context.Context, v, places decimal.Decimal) (decimal.Decimal, error) {
-	return v.Round(int32(places.IntPart())), nil
+func funRoundBank(v *decimal.Big) (*decimal.Big, error) {
+	// 将 v 的小数部分提取出来
+	mv := new(decimal.Big).Rem(v, decimal.New(1, 0))
+	if mv.Cmp(decimal.New(5, -1)) <= 0 {
+		return funCeil(v)
+	} else {
+		return funFloor(v)
+	}
 }
 
-func funRoundBank(ctx context.Context, v, places decimal.Decimal) (decimal.Decimal, error) {
-	return v.RoundBank(int32(places.IntPart())), nil
+func funRoundCash(v, places *decimal.Big) (*decimal.Big, error) {
+	mv := new(decimal.Big).Rem(v, decimal.New(1, 0))
+	if mv.Cmp(decimal.New(5, -2)) <= 0 {
+		return funCeil(v)
+	} else {
+		return funFloor(v)
+	}
 }
 
-func funRoundCash(ctx context.Context, v, places decimal.Decimal) (decimal.Decimal, error) {
-	return v.RoundCash(uint8(places.IntPart())), nil
-}
-
-func funRoundCeil(ctx context.Context, v, places decimal.Decimal) (decimal.Decimal, error) {
-	return v.RoundCeil(int32(places.IntPart())), nil
-}
-
-func funRoundDown(ctx context.Context, v, places decimal.Decimal) (decimal.Decimal, error) {
-	return v.RoundDown(int32(places.IntPart())), nil
-}
-
-func funRoundFloor(ctx context.Context, v, places decimal.Decimal) (decimal.Decimal, error) {
-	return v.RoundFloor(int32(places.IntPart())), nil
-}
-
-func funRoundUp(ctx context.Context, v, places decimal.Decimal) (decimal.Decimal, error) {
-	return v.RoundUp(int32(places.IntPart())), nil
-}
-
-func funSqrt(ctx context.Context, v decimal.Decimal) (decimal.Decimal, error) {
-	return decimal.NewFromFloat(math.Sqrt(v.InexactFloat64())), nil
+func funSqrt(v *decimal.Big) (*decimal.Big, error) {
+	result := new(decimal.Big)
+	decimal.Context64.Sqrt(result, v)
+	return result, nil
 }
 
 // FUNCTION STRING
-func funStartWith(ctx context.Context, s string, substr string) (bool, error) {
+func funStartWith(s string, substr string) (bool, error) {
 	return strings.Index(s, substr) == 0, nil
 }
 
-func funEndWith(ctx context.Context, s string, substr string) (bool, error) {
+func funEndWith(s string, substr string) (bool, error) {
 	return strings.Index(s, substr) == len(s)-len(substr), nil
 }
 
-func funContains(ctx context.Context, s string, substr string) (bool, error) {
+func funContains(s string, substr string) (bool, error) {
 	return strings.Contains(s, substr), nil
 }
 
-func funFind(ctx context.Context, s string, substr string) (decimal.Decimal, error) {
-	return decimal.NewFromInt(int64(strings.Index(s, substr))), nil
+func funFind(s string, substr string) (int, error) {
+	return strings.Index(s, substr), nil
 }
 
-func funIncludes(ctx context.Context, list []string, item string) (bool, error) {
+func funIncludes(list []string, item string) (bool, error) {
 	for _, v := range list {
 		if v == item {
 			return true, nil
@@ -826,73 +1052,71 @@ func funIncludes(ctx context.Context, list []string, item string) (bool, error) 
 	return false, nil
 }
 
-func funLeft(ctx context.Context, v string, ld decimal.Decimal) (string, error) {
-	l := int(ld.IntPart())
+func funLeft(v string, ld int) (string, error) {
+	l := ld
 	if l > len(v) {
 		l = len(v)
 	}
 	return v[:l], nil
 }
 
-func funRight(ctx context.Context, v string, ld decimal.Decimal) (string, error) {
-	l := int(ld.IntPart())
+func funRight(v string, ld int) (string, error) {
+	l := ld
 	if l > len(v) {
 		l = len(v)
 	}
 	return v[len(v)-l:], nil
 }
 
-func funLen(ctx context.Context, v string) (decimal.Decimal, error) {
-	return decimal.NewFromInt(int64(len(v))), nil
+func funLen(v string) (int, error) {
+	return len(v), nil
 }
 
-func funLower(ctx context.Context, v string) (string, error) {
+func funLower(v string) (string, error) {
 	return strings.ToLower(v), nil
 }
 
-func funUpper(ctx context.Context, v string) (string, error) {
+func funUpper(v string) (string, error) {
 	return strings.ToUpper(v), nil
 }
 
-func funLpad(ctx context.Context, s, ps string, l decimal.Decimal) (string, error) {
-	if len(s) > int(l.IntPart()) {
-		return s[:int(l.IntPart())], nil
+func funLpad(s, ps string, l int) (string, error) {
+	if len(s) > int(l) {
+		return s[:int(l)], nil
 	}
-	return strings.Repeat(ps, int(l.IntPart())-len(s)) + s, nil
+	return strings.Repeat(ps, l-len(s)) + s, nil
 }
 
-func funRpad(ctx context.Context, s, ps string, l decimal.Decimal) (string, error) {
-	if len(s) > int(l.IntPart()) {
-		return s[:int(l.IntPart())], nil
+func funRpad(s, ps string, l int) (string, error) {
+	if len(s) > int(l) {
+		return s[:int(l)], nil
 	}
-	return s + strings.Repeat(ps, int(l.IntPart())-len(s)), nil
+	return s + strings.Repeat(ps, l-len(s)), nil
 }
 
-func funMid(ctx context.Context, s string, start, end decimal.Decimal) (string, error) {
-	istart := int(start.IntPart())
-	iend := int(end.IntPart())
-	if istart < 0 {
-		istart = 0
+func funMid(s string, start, end int) (string, error) {
+	if start < 0 {
+		start = 0
 	}
-	if iend > len(s) {
-		iend = len(s)
+	if end > len(s) {
+		end = len(s)
 	}
-	return s[istart:iend], nil
+	return s[start:end], nil
 }
 
-func funReplace(ctx context.Context, s, old, new string) (string, error) {
+func funReplace(s, old, new string) (string, error) {
 	return strings.ReplaceAll(s, old, new), nil
 }
 
-func funTrim(ctx context.Context, s string) (string, error) {
+func funTrim(s string) (string, error) {
 	return strings.TrimSpace(s), nil
 }
 
-func funRegexp(ctx context.Context, s string, reg string) (bool, error) {
+func funRegexp(s string, reg string) (bool, error) {
 	return regexp.MustCompile(reg).Match([]byte(s)), nil
 }
 
-func funMapToArr(ctx context.Context, m []map[string]any, key string) ([]any, error) {
+func funMapToArr(m []map[string]any, key string) ([]any, error) {
 	var result []any
 	for _, v := range m {
 		result = append(result, v[key])
@@ -900,6 +1124,6 @@ func funMapToArr(ctx context.Context, m []map[string]any, key string) ([]any, er
 	return result, nil
 }
 
-func funJoin(ctx context.Context, arr []string, join string) (string, error) {
+func funJoin(arr []string, join string) (string, error) {
 	return strings.Join(arr, join), nil
 }

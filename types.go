@@ -46,27 +46,32 @@ const (
 	SK_DotDotDot    // ...
 	SK_Comma        // ,
 
-	SK_LessThan           // <
-	SK_GreaterThan        // >
-	SK_LessThanEquals     // <=
-	SK_GreaterThanEquals  // >=
-	SK_EqualsEquals       // ==
-	SK_ExclamationEquals  // !=
-	SK_Plus               // +
-	SK_Minus              // -
-	SK_Asterisk           // *
-	SK_Slash              // /
-	SK_Percent            // %
-	SK_Ampersand          // &
-	SK_Bar                // |
-	SK_Caret              // ^
-	SK_AmpersandAmpersand // &&
-	SK_BarBar             // ||
-	SK_Equals             // =
-	SK_Exclamation        // !
-	SK_Tilde              // ~
-	SK_Question           // ?
-	SK_Colon              // :
+	SK_LessThan                // <
+	SK_GreaterThan             // >
+	SK_LessThanEquals          // <=
+	SK_GreaterThanEquals       // >=
+	SK_EqualsEquals            // ==
+	SK_EqualsEqualsEquals      // ===
+	SK_ExclamationEquals       // !=
+	SK_ExclamationEqualsEquals // !==
+	SK_Plus                    // +
+	SK_Minus                   // -
+	SK_Asterisk                // *
+	SK_Slash                   // /
+	SK_Percent                 // %
+	SK_Ampersand               // &
+	SK_Bar                     // |
+	SK_Caret                   // ^
+	SK_AmpersandAmpersand      // &&
+	SK_BarBar                  // ||
+	SK_QuestionQuestion        // ??
+	SK_Equals                  // =
+	SK_Exclamation             // !
+	SK_ExclamationDot          // !.
+	SK_ExclamationExclamation  // !!
+	SK_Tilde                   // ~
+	SK_Question                // ?
+	SK_Colon                   // :
 
 	// Identifiers
 	SK_Identifier
@@ -75,17 +80,19 @@ const (
 	SK_TrueKeyword
 	SK_FalseKeyword
 	SK_NullKeyword
+	SK_ThisKeyword
+	SK_CtxKeyword
 
 	SK_Count
 	// Markers
 	SK_FirstKeyword        = SK_TrueKeyword
-	SK_LastKeyword         = SK_NullKeyword
+	SK_LastKeyword         = SK_CtxKeyword
 	SK_FirstPunctuation    = SK_OpenParen
 	SK_LastPunctuation     = SK_Comma
 	SK_FirstLiteral        = SK_NumberLiteral
 	SK_LastLiteral         = SK_StringLiteral
 	SK_FirstBinaryOperator = SK_LessThan
-	SK_LastBinaryOperator  = SK_BarBar
+	SK_LastBinaryOperator  = SK_QuestionQuestion
 )
 
 var tokens = [...]string{
@@ -100,6 +107,8 @@ var tokens = [...]string{
 	SK_TrueKeyword:  "true",
 	SK_FalseKeyword: "false",
 	SK_NullKeyword:  "null",
+	SK_ThisKeyword:  "this",
+	SK_CtxKeyword:   "ctx",
 }
 
 func (tok SyntaxKind) IsKeyword() bool { return tok >= SK_FirstKeyword && tok <= SK_LastKeyword }
@@ -295,6 +304,7 @@ type (
 	SelectorExpression struct {
 		Expression Expression
 		Name       *Identifier
+		Assert     bool
 		expression
 	}
 
