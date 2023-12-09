@@ -90,10 +90,8 @@ func RunnerFromCtx(ctx context.Context) *Runner {
 }
 
 type Runner struct {
-	this                       map[string]interface{}
-	value                      map[string]interface{}
-	IdentifierResolver         func(ctx context.Context, name string) (interface{}, error)
-	SelectorExpressionResolver func(ctx context.Context, name string) (interface{}, error)
+	this  map[string]interface{}
+	value map[string]interface{}
 }
 
 func (r *Runner) SetThis(m map[string]interface{}) {
