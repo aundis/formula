@@ -1026,7 +1026,7 @@ func funSqrt(v *decimal.Big) (*decimal.Big, error) {
 }
 
 func funFinite(v interface{}) (*decimal.Big, error) {
-	if f, ok := v.(*decimal.Big); ok && f.IsFinite() {
+	if f, ok := v.(*decimal.Big); ok && f != nil && f.IsFinite() {
 		return f, nil
 	}
 	return decimal.New(0, 0), nil
