@@ -53,6 +53,7 @@ func init() {
 	innerMap.Store("roundBank", funRoundBank)
 	innerMap.Store("roundCash", funRoundCash)
 	innerMap.Store("sqrt", funSqrt)
+	innerMap.Store("finite", funFinite)
 	// FUNCTION STRING
 	innerMap.Store("startWith", funStartWith)
 	innerMap.Store("endWith", funEndWith)
@@ -1022,6 +1023,13 @@ func funSqrt(v *decimal.Big) (*decimal.Big, error) {
 	result := new(decimal.Big)
 	decimal.Context64.Sqrt(result, v)
 	return result, nil
+}
+
+func funFinite(v interface{}) (*decimal.Big, error) {
+	if f, ok := v.(*decimal.Big); ok && f.IsFinite() {
+		return f, nil
+	}
+	return decimal.New(0, 0), nil
 }
 
 // FUNCTION STRING

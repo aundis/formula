@@ -2,6 +2,7 @@ package formula
 
 import (
 	"context"
+	"math"
 	"reflect"
 	"testing"
 )
@@ -142,4 +143,28 @@ func TestOutput(t *testing.T) {
 		return
 	}
 	t.Log(v)
+}
+
+func TestFunFinite(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("finite(a) + finite(b) + finite(c)"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	runner.SetThis(map[string]interface{}{
+		"a": math.NaN(),
+		"b": math.Inf(1),
+		"c": math.Inf(0),
+	})
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != float64(0) {
+		t.Error("except 0 but got", v)
+		return
+	}
 }
