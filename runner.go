@@ -196,7 +196,12 @@ func getObjectValueFromKey(v interface{}, key string) (interface{}, error) {
 	rv := reflect.ValueOf(v)
 	switch rt.Kind() {
 	case reflect.Map:
-		return rv.MapIndex(reflect.ValueOf(key)).Interface(), nil
+		mv := rv.MapIndex(reflect.ValueOf(key))
+		if mv.Kind() == 0 || mv.IsZero() {
+			return nil, nil
+		}
+		return mv.Interface(), nil
+		// return rv.MapIndex(reflect.ValueOf(key)).Interface(), nil
 	case reflect.Struct:
 		field := rv.FieldByName(key)
 		return field.Interface(), nil

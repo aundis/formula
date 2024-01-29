@@ -168,3 +168,17 @@ func TestFunFinite(t *testing.T) {
 		return
 	}
 }
+
+func TestGetObjectValueFromKey(t *testing.T) {
+	// 使用一个不存在的key
+	v, _ := getObjectValueFromKey(M{}, "a")
+	if v != nil {
+		t.Error("except nil")
+		return
+	}
+	v, _ = getObjectValueFromKey(M{"age": 10}, "age")
+	if v != 10 {
+		t.Error("except 10")
+		return
+	}
+}
