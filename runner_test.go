@@ -182,3 +182,47 @@ func TestGetObjectValueFromKey(t *testing.T) {
 		return
 	}
 }
+
+func TestStringEqualsEqualsEqualsCmp(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("v==='染色'"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	runner.SetThis(map[string]interface{}{
+		"name": "染色",
+	})
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != false {
+		t.Error("except false")
+		return
+	}
+}
+
+func TestFloatAdd(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("v+1.2"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	runner.SetThis(map[string]interface{}{
+		"v": 1,
+	})
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != float64(2.2) {
+		t.Error("except 2.2")
+		return
+	}
+}

@@ -712,7 +712,7 @@ func (r *Runner) valueLikeEqualTo(v1, v2 interface{}) bool {
 }
 
 func (r *Runner) resolveEqualsEqualsEqualsBinaryExpression(expr *BinaryExpression, v1, v2 interface{}) (interface{}, error) {
-	return !r.valueEqualTo(v1, v2), nil
+	return r.valueEqualTo(v1, v2), nil
 }
 
 func (r *Runner) resolveNotEqualsEqualsBinaryExpression(expr *BinaryExpression, v1, v2 interface{}) (interface{}, error) {
