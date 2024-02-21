@@ -261,13 +261,19 @@ func (r *Runner) resolveCallExpression(ctx context.Context, expr *CallExpression
 	}
 	// 实参数量校验
 	paramCount := funType.NumIn()
+	// 最少要传递的参数个数
+	minParamCount := paramCount
+	hasContextParam := firstParamIsContext(funType)
+	if hasContextParam {
+		minParamCount--
+	}
 	if !hasVariadic || expr.DotDotDotToken != nil {
-		if len(args) != paramCount {
-			return nil, fmt.Errorf("call function '%s' error: argument count except %d but got %d", name, paramCount, len(args))
+		if len(args) != minParamCount {
+			return nil, fmt.Errorf("call function '%s' error: argument count except %d but got %d", name, minParamCount, len(args))
 		}
 	} else {
-		if len(args) < paramCount-1 {
-			return nil, fmt.Errorf("call function '%s' error: argument count except greater than or equal %d but got %d", name, paramCount-1, len(args))
+		if len(args) < minParamCount-1 {
+			return nil, fmt.Errorf("call function '%s' error: argument count except greater than or equal %d but got %d", name, minParamCount-1, len(args))
 		}
 	}
 	// (...) 数组展开
@@ -280,10 +286,13 @@ func (r *Runner) resolveCallExpression(ctx context.Context, expr *CallExpression
 	}
 	// 参数转换
 	callArgs := []reflect.Value{}
+	if hasContextParam {
+		callArgs = append(callArgs, reflect.ValueOf(ctx))
+	}
 	for i := 0; i < len(args); i++ {
 		var targetType reflect.Type
-		if hasVariadic && i >= paramCount-1 {
-			targetType = funType.In(paramCount - 1)
+		if hasVariadic && i >= minParamCount-1 {
+			targetType = funType.In(minParamCount - 1)
 			targetType = targetType.Elem()
 		} else {
 			targetType = funType.In(i)
@@ -304,6 +313,16 @@ func (r *Runner) resolveCallExpression(ctx context.Context, expr *CallExpression
 		err = fmt.Errorf("call function '%s' error: %s", name, err.Error())
 	}
 	return results[0].Interface(), err
+}
+
+func firstParamIsContext(funcType reflect.Type) bool {
+	if funcType.NumIn() > 0 {
+		// 获取第一个参数的类型
+		firstParamType := funcType.In(0)
+		// 检查第一个参数的类型是否为 context.Context
+		return firstParamType == reflect.TypeOf((*context.Context)(nil)).Elem()
+	}
+	return false
 }
 
 func expandArrayArgument(v interface{}) ([]interface{}, error) {

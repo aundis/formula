@@ -5,6 +5,8 @@ import (
 	"math"
 	"reflect"
 	"testing"
+
+	"github.com/ericlagergren/decimal"
 )
 
 func TestConvTypeToTarget(t *testing.T) {
@@ -279,6 +281,30 @@ func TestToFloat(t *testing.T) {
 	}
 	if v != float64(5.5) {
 		t.Error("except 5.5")
+		return
+	}
+}
+
+func TestCtxFunc(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("add(10, 20)"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	runner.SetThis(map[string]interface{}{
+		"add": func(ctx context.Context, a, b *decimal.Big) (*decimal.Big, error) {
+			return new(decimal.Big).Add(a, b), nil
+		},
+	})
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != float64(30) {
+		t.Error("except 30")
 		return
 	}
 }
