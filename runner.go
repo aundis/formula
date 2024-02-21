@@ -74,6 +74,11 @@ func init() {
 	// UTILITIES
 	innerMap.Store("mapToArr", funMapToArr)
 	innerMap.Store("join", funJoin)
+	// CONV
+	innerMap.Store("toString", funToString)
+	innerMap.Store("toInt", funToInt)
+	innerMap.Store("toFloat", funToFloat)
+
 }
 
 func NewRunner() *Runner {
@@ -573,12 +578,12 @@ func (r *Runner) resolveBinaryExpression(ctx context.Context, expr *BinaryExpres
 func (r *Runner) resolveLessThanBinaryExpressino(v1, v2 interface{}) (interface{}, error) {
 	switch v1.(type) {
 	case string:
-		s1 := r.toString(v1)
-		s2 := r.toString(v2)
+		s1 := convToString(v1)
+		s2 := convToString(v2)
 		return s1 < s2, nil
 	default:
-		n1 := r.toNumber(v1)
-		n2 := r.toNumber(v2)
+		n1 := convToNumber(v1)
+		n2 := convToNumber(v2)
 		return n1.Cmp(n2) == -1, nil
 	}
 }
@@ -586,12 +591,12 @@ func (r *Runner) resolveLessThanBinaryExpressino(v1, v2 interface{}) (interface{
 func (r *Runner) resolveGreaterThanBinaryExpressino(v1, v2 interface{}) (interface{}, error) {
 	switch v1.(type) {
 	case string:
-		s1 := r.toString(v1)
-		s2 := r.toString(v2)
+		s1 := convToString(v1)
+		s2 := convToString(v2)
 		return s1 > s2, nil
 	default:
-		n1 := r.toNumber(v1)
-		n2 := r.toNumber(v2)
+		n1 := convToNumber(v1)
+		n2 := convToNumber(v2)
 		return n1.Cmp(n2) == 1, nil
 	}
 }
@@ -599,12 +604,12 @@ func (r *Runner) resolveGreaterThanBinaryExpressino(v1, v2 interface{}) (interfa
 func (r *Runner) resolveLessThanEqualsBinaryExpressino(v1, v2 interface{}) (interface{}, error) {
 	switch v1.(type) {
 	case string:
-		s1 := r.toString(v1)
-		s2 := r.toString(v2)
+		s1 := convToString(v1)
+		s2 := convToString(v2)
 		return s1 <= s2, nil
 	default:
-		n1 := r.toNumber(v1)
-		n2 := r.toNumber(v2)
+		n1 := convToNumber(v1)
+		n2 := convToNumber(v2)
 		return n1.Cmp(n2) <= 0, nil
 	}
 }
@@ -612,12 +617,12 @@ func (r *Runner) resolveLessThanEqualsBinaryExpressino(v1, v2 interface{}) (inte
 func (r *Runner) resolveGreaterThanEqualsBinaryExpressino(v1, v2 interface{}) (interface{}, error) {
 	switch v1.(type) {
 	case string:
-		s1 := r.toString(v1)
-		s2 := r.toString(v2)
+		s1 := convToString(v1)
+		s2 := convToString(v2)
 		return s1 >= s2, nil
 	default:
-		n1 := r.toNumber(v1)
-		n2 := r.toNumber(v2)
+		n1 := convToNumber(v1)
+		n2 := convToNumber(v2)
 		return n1.Cmp(n2) >= 0, nil
 	}
 }
@@ -625,12 +630,12 @@ func (r *Runner) resolveGreaterThanEqualsBinaryExpressino(v1, v2 interface{}) (i
 func (r *Runner) resolvePlusBinaryExpression(v1, v2 interface{}) (interface{}, error) {
 	switch v1.(type) {
 	case string:
-		s1 := r.toString(v1)
-		s2 := r.toString(v2)
+		s1 := convToString(v1)
+		s2 := convToString(v2)
 		return s1 + s2, nil
 	default:
-		n1 := r.toNumber(v1)
-		n2 := r.toNumber(v2)
+		n1 := convToNumber(v1)
+		n2 := convToNumber(v2)
 		return new(decimal.Big).Add(n1, n2), nil
 	}
 }
@@ -638,49 +643,49 @@ func (r *Runner) resolvePlusBinaryExpression(v1, v2 interface{}) (interface{}, e
 func (r *Runner) resolveMinusBinaryExpressino(v1, v2 interface{}) (interface{}, error) {
 	switch v1.(type) {
 	case string:
-		s1 := r.toString(v1)
-		s2 := r.toString(v2)
+		s1 := convToString(v1)
+		s2 := convToString(v2)
 		return s1 + s2, nil
 	default:
-		n1 := r.toNumber(v1)
-		n2 := r.toNumber(v2)
+		n1 := convToNumber(v1)
+		n2 := convToNumber(v2)
 		return new(decimal.Big).Sub(n1, n2), nil
 	}
 }
 
 func (r *Runner) resolveAsteriskBinaryExpressino(v1, v2 interface{}) (interface{}, error) {
-	n1 := r.toNumber(v1)
-	n2 := r.toNumber(v2)
+	n1 := convToNumber(v1)
+	n2 := convToNumber(v2)
 	return new(decimal.Big).Mul(n1, n2), nil
 }
 
 func (r *Runner) resolveSlashBinaryExpression(v1, v2 interface{}) (interface{}, error) {
-	n1 := r.toNumber(v1)
-	n2 := r.toNumber(v2)
+	n1 := convToNumber(v1)
+	n2 := convToNumber(v2)
 	return new(decimal.Big).Quo(n1, n2), nil
 }
 
 func (r *Runner) resolvePercentBinaryExpression(v1, v2 interface{}) (interface{}, error) {
-	n1 := r.toNumber(v1)
-	n2 := r.toNumber(v2)
+	n1 := convToNumber(v1)
+	n2 := convToNumber(v2)
 	return new(decimal.Big).Rem(n1, n2), nil
 }
 
 func (r *Runner) resolveAmpersandBinaryExpression(v1, v2 interface{}) (interface{}, error) {
-	i1, _ := r.toNumber(v1).Int64()
-	i2, _ := r.toNumber(v2).Int64()
+	i1, _ := convToNumber(v1).Int64()
+	i2, _ := convToNumber(v2).Int64()
 	return new(decimal.Big).SetFloat64(float64(i1 & i2)), nil
 }
 
 func (r *Runner) resolveBarBinaryExpression(v1, v2 interface{}) (interface{}, error) {
-	i1, _ := r.toNumber(v1).Int64()
-	i2, _ := r.toNumber(v2).Int64()
+	i1, _ := convToNumber(v1).Int64()
+	i2, _ := convToNumber(v2).Int64()
 	return new(decimal.Big).SetFloat64(float64(i1 | i2)), nil
 }
 
 func (r *Runner) resolveCaretBinaryExpression(v1, v2 interface{}) (interface{}, error) {
-	i1, _ := r.toNumber(v1).Int64()
-	i2, _ := r.toNumber(v2).Int64()
+	i1, _ := convToNumber(v1).Int64()
+	i2, _ := convToNumber(v2).Int64()
 	return new(decimal.Big).SetFloat64(float64(i1 ^ i2)), nil
 }
 
@@ -695,16 +700,16 @@ func (r *Runner) resolveNotEqualsBinaryExpression(expr *BinaryExpression, v1, v2
 func (r *Runner) valueLikeEqualTo(v1, v2 interface{}) bool {
 	switch v1.(type) {
 	case *decimal.Big:
-		n1 := r.toNumber(v1)
-		n2 := r.toNumber(v2)
+		n1 := convToNumber(v1)
+		n2 := convToNumber(v2)
 		return n1.Cmp(n2) == 0
 	case bool:
-		n1 := r.toNumber(v1)
-		n2 := r.toNumber(v2)
+		n1 := convToNumber(v1)
+		n2 := convToNumber(v2)
 		return n1.Cmp(n2) == 0
 	case string:
-		s1 := r.toString(v1)
-		s2 := r.toString(v2)
+		s1 := convToString(v1)
+		s2 := convToString(v2)
 		return s1 == s2
 	default:
 		return IsNull(v1) && IsNull(v2) || v1 == v2
@@ -832,7 +837,7 @@ func (r *Runner) resolveConditionalExpression(ctx context.Context, expr *Conditi
 	}
 }
 
-func (r *Runner) toString(v interface{}) string {
+func convToString(v interface{}) string {
 	switch n := v.(type) {
 	case string:
 		return n
@@ -843,7 +848,7 @@ func (r *Runner) toString(v interface{}) string {
 	}
 }
 
-func (r *Runner) toNumber(v interface{}) *decimal.Big {
+func convToNumber(v interface{}) *decimal.Big {
 	switch n := v.(type) {
 	case *decimal.Big:
 		return n
@@ -1137,4 +1142,19 @@ func funMapToArr(m []map[string]any, key string) ([]any, error) {
 
 func funJoin(arr []string, join string) (string, error) {
 	return strings.Join(arr, join), nil
+}
+
+// CONV
+func funToString(v interface{}) (string, error) {
+	return convToString(v), nil
+}
+
+func funToInt(v interface{}) (*decimal.Big, error) {
+	n := convToNumber(v)
+	iv, _ := n.Int64()
+	return new(decimal.Big).SetFloat64(float64(iv)), nil
+}
+
+func funToFloat(v interface{}) (*decimal.Big, error) {
+	return convToNumber(v), nil
 }

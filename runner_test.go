@@ -226,3 +226,59 @@ func TestFloatAdd(t *testing.T) {
 		return
 	}
 }
+func TestToString(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("toString(1)"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != "1" {
+		t.Error("except '1'")
+		return
+	}
+}
+
+func TestToInt(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("toInt('1.3')"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != float64(1) {
+		t.Error("except 1")
+		return
+	}
+}
+
+func TestToFloat(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("toFloat('5.5')"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != float64(5.5) {
+		t.Error("except 5.5")
+		return
+	}
+}
