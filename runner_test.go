@@ -2,6 +2,7 @@ package formula
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"reflect"
 	"testing"
@@ -287,15 +288,15 @@ func TestToFloat(t *testing.T) {
 
 func TestCtxFunc(t *testing.T) {
 	ctx := context.Background()
-	code, err := ParseSourceCode([]byte("add(10, 20)"))
+	code, err := ParseSourceCode([]byte("add('1', 30)"))
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	runner := NewRunner()
 	runner.SetThis(map[string]interface{}{
-		"add": func(ctx context.Context, a, b *decimal.Big) (*decimal.Big, error) {
-			return new(decimal.Big).Add(a, b), nil
+		"add": func(ctx context.Context, a string, b *decimal.Big) (string, error) {
+			return fmt.Sprintf("%s,%s", a, b.String()), nil
 		},
 	})
 	v, err := runner.Resolve(ctx, code.Expression)
@@ -303,8 +304,8 @@ func TestCtxFunc(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if v != float64(30) {
-		t.Error("except 30")
+	if v != "1,30" {
+		t.Error("except '1,30'")
 		return
 	}
 }

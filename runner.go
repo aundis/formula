@@ -262,18 +262,21 @@ func (r *Runner) resolveCallExpression(ctx context.Context, expr *CallExpression
 	// 实参数量校验
 	paramCount := funType.NumIn()
 	// 最少要传递的参数个数
-	minParamCount := paramCount
-	hasContextParam := firstParamIsContext(funType)
-	if hasContextParam {
-		minParamCount--
+	minArgsCount := paramCount
+	hasContextParam := 0
+	if firstParamIsContext(funType) {
+		hasContextParam = 1
+	}
+	if hasContextParam == 1 {
+		minArgsCount--
 	}
 	if !hasVariadic || expr.DotDotDotToken != nil {
-		if len(args) != minParamCount {
-			return nil, fmt.Errorf("call function '%s' error: argument count except %d but got %d", name, minParamCount, len(args))
+		if len(args) != minArgsCount {
+			return nil, fmt.Errorf("call function '%s' error: argument count except %d but got %d", name, minArgsCount, len(args))
 		}
 	} else {
-		if len(args) < minParamCount-1 {
-			return nil, fmt.Errorf("call function '%s' error: argument count except greater than or equal %d but got %d", name, minParamCount-1, len(args))
+		if len(args) < minArgsCount-1 {
+			return nil, fmt.Errorf("call function '%s' error: argument count except greater than or equal %d but got %d", name, minArgsCount-1, len(args))
 		}
 	}
 	// (...) 数组展开
@@ -286,16 +289,16 @@ func (r *Runner) resolveCallExpression(ctx context.Context, expr *CallExpression
 	}
 	// 参数转换
 	callArgs := []reflect.Value{}
-	if hasContextParam {
+	if hasContextParam == 1 {
 		callArgs = append(callArgs, reflect.ValueOf(ctx))
 	}
 	for i := 0; i < len(args); i++ {
 		var targetType reflect.Type
-		if hasVariadic && i >= minParamCount-1 {
-			targetType = funType.In(minParamCount - 1)
+		if hasVariadic && i >= minArgsCount-1 {
+			targetType = funType.In(paramCount - 1)
 			targetType = targetType.Elem()
 		} else {
-			targetType = funType.In(i)
+			targetType = funType.In(i + hasContextParam)
 		}
 		convd, err := convTypeToTarget(args[i], targetType)
 		if err != nil {
