@@ -309,3 +309,26 @@ func TestCtxFunc(t *testing.T) {
 		return
 	}
 }
+
+func TestUseNilToArg(t *testing.T) {
+	// nilInterface := reflect.New(reflect.TypeOf((*interface{})(nil)).Elem()).Elem().Interface()
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("finite(a)"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	runner.SetThis(map[string]interface{}{
+		"a": nil,
+	})
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != float64(0) {
+		t.Error("except 0")
+		return
+	}
+}

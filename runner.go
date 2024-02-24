@@ -304,7 +304,13 @@ func (r *Runner) resolveCallExpression(ctx context.Context, expr *CallExpression
 		if err != nil {
 			return nil, fmt.Errorf("call function '%s' conv arg#%d error: %s", name, i+1, err.Error())
 		}
-		callArgs = append(callArgs, reflect.ValueOf(convd))
+		if convd == nil {
+			// 根据参数类型创建对应类型的零值
+			nilValue := reflect.Zero(targetType)
+			callArgs = append(callArgs, reflect.ValueOf(nilValue))
+		} else {
+			callArgs = append(callArgs, reflect.ValueOf(convd))
+		}
 	}
 	// 调用函数
 	results := reflect.ValueOf(fun).Call(callArgs)
