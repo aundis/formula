@@ -332,3 +332,26 @@ func TestUseNilToArg(t *testing.T) {
 		return
 	}
 }
+
+func TestNotNumber(t *testing.T) {
+	// nilInterface := reflect.New(reflect.TypeOf((*interface{})(nil)).Elem()).Elem().Interface()
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("!a"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	runner.SetThis(map[string]interface{}{
+		"a": 1,
+	})
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != false {
+		t.Error("except false")
+		return
+	}
+}
