@@ -686,12 +686,6 @@ func (r *Runner) resolveMinusBinaryExpressino(v1, v2 interface{}) (interface{}, 
 	default:
 		n1 := convToNumber(v1)
 		n2 := convToNumber(v2)
-		fmt.Println(n1.Float64())
-		fmt.Println(n2.Float64())
-
-		r := new(decimal.Big).Sub(n1, n2)
-		fmt.Println(r.Float64())
-		fmt.Println("---")
 		return new(decimal.Big).Sub(n1, n2), nil
 	}
 }
