@@ -153,15 +153,22 @@ func (r *Runner) resolve(ctx context.Context, v Expression) (res interface{}, er
 func formatInput(v interface{}) (interface{}, error) {
 	switch n := v.(type) {
 	case int:
+		strconv.Itoa(n)
 		return new(decimal.Big).SetFloat64(float64(n)), nil
 	case int32:
 		return new(decimal.Big).SetFloat64(float64(n)), nil
 	case int64:
 		return new(decimal.Big).SetFloat64(float64(n)), nil
 	case float32:
-		return new(decimal.Big).SetFloat64(float64(n)), nil
+		// 避免精度损失
+		nStr := strconv.FormatFloat(float64(n), 'f', -1, 64)
+		r, _ := new(decimal.Big).SetString(nStr)
+		return r, nil
 	case float64:
-		return new(decimal.Big).SetFloat64(float64(n)), nil
+		// 避免精度损失
+		nStr := strconv.FormatFloat(float64(n), 'f', -1, 64)
+		r, _ := new(decimal.Big).SetString(nStr)
+		return r, nil
 	case time.Time:
 		return n, nil
 	case string:
@@ -679,6 +686,12 @@ func (r *Runner) resolveMinusBinaryExpressino(v1, v2 interface{}) (interface{}, 
 	default:
 		n1 := convToNumber(v1)
 		n2 := convToNumber(v2)
+		fmt.Println(n1.Float64())
+		fmt.Println(n2.Float64())
+
+		r := new(decimal.Big).Sub(n1, n2)
+		fmt.Println(r.Float64())
+		fmt.Println("---")
 		return new(decimal.Big).Sub(n1, n2), nil
 	}
 }

@@ -286,6 +286,30 @@ func TestToFloat(t *testing.T) {
 	}
 }
 
+func TestToFloatSub(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("a - c - b"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	runner.SetThis(map[string]interface{}{
+		"a": 33.199999,
+		"b": 33.199999,
+		"c": 0,
+	})
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != float64(0) {
+		t.Errorf("except 0 but got %v", v)
+		return
+	}
+}
+
 func TestCtxFunc(t *testing.T) {
 	ctx := context.Background()
 	code, err := ParseSourceCode([]byte("add('1', 30)"))
