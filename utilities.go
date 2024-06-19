@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/ericlagergren/decimal"
 )
 
 func Is[T any](n any) bool {
@@ -107,4 +109,8 @@ func FormatDiagnostic(source *SourceCode, diagnostic *Diagnostic) string {
 	var loc = GetFileLineAndCharacterFromPosition(source, diagnostic.Start)
 	var category = strings.ToLower(diagnostic.Category.ToString())
 	return fmt.Sprintf("pos(%d, %d) %s(%d) %s", loc.Line, loc.Column, category, diagnostic.Code, diagnostic.MessageText)
+}
+
+func newDecimalBig() *decimal.Big {
+	return decimal.WithContext(decimal.Context128)
 }

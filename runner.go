@@ -154,20 +154,20 @@ func formatInput(v interface{}) (interface{}, error) {
 	switch n := v.(type) {
 	case int:
 		strconv.Itoa(n)
-		return new(decimal.Big).SetFloat64(float64(n)), nil
+		return newDecimalBig().SetFloat64(float64(n)), nil
 	case int32:
-		return new(decimal.Big).SetFloat64(float64(n)), nil
+		return newDecimalBig().SetFloat64(float64(n)), nil
 	case int64:
-		return new(decimal.Big).SetFloat64(float64(n)), nil
+		return newDecimalBig().SetFloat64(float64(n)), nil
 	case float32:
 		// 避免精度损失
 		nStr := strconv.FormatFloat(float64(n), 'f', -1, 64)
-		r, _ := new(decimal.Big).SetString(nStr)
+		r, _ := newDecimalBig().SetString(nStr)
 		return r, nil
 	case float64:
 		// 避免精度损失
 		nStr := strconv.FormatFloat(float64(n), 'f', -1, 64)
-		r, _ := new(decimal.Big).SetString(nStr)
+		r, _ := newDecimalBig().SetString(nStr)
 		return r, nil
 	case time.Time:
 		return n, nil
@@ -522,7 +522,7 @@ func (r *Runner) resolvePlusUnaryExpression(v interface{}) (interface{}, error) 
 func (r *Runner) resolveMinusUnaryExpression(v interface{}) (interface{}, error) {
 	switch n := v.(type) {
 	case *decimal.Big:
-		return new(decimal.Big).Neg(n), nil
+		return newDecimalBig().Neg(n), nil
 	case string:
 		r, err := strconv.Atoi(n)
 		if err != nil {
@@ -555,7 +555,7 @@ func (r *Runner) resolveTildeUnaryExpression(v interface{}) (interface{}, error)
 	switch n := v.(type) {
 	case *decimal.Big:
 		iv, _ := n.Int64()
-		return new(decimal.Big).SetUint64(uint64(iv)), nil
+		return newDecimalBig().SetUint64(uint64(iv)), nil
 	default:
 		return nil, fmt.Errorf("unary expressin '~' not support type %T", v)
 	}
@@ -673,7 +673,7 @@ func (r *Runner) resolvePlusBinaryExpression(v1, v2 interface{}) (interface{}, e
 	default:
 		n1 := convToNumber(v1)
 		n2 := convToNumber(v2)
-		return new(decimal.Big).Add(n1, n2), nil
+		return newDecimalBig().Add(n1, n2), nil
 	}
 }
 
@@ -686,44 +686,44 @@ func (r *Runner) resolveMinusBinaryExpressino(v1, v2 interface{}) (interface{}, 
 	default:
 		n1 := convToNumber(v1)
 		n2 := convToNumber(v2)
-		return new(decimal.Big).Sub(n1, n2), nil
+		return newDecimalBig().Sub(n1, n2), nil
 	}
 }
 
 func (r *Runner) resolveAsteriskBinaryExpressino(v1, v2 interface{}) (interface{}, error) {
 	n1 := convToNumber(v1)
 	n2 := convToNumber(v2)
-	return new(decimal.Big).Mul(n1, n2), nil
+	return newDecimalBig().Mul(n1, n2), nil
 }
 
 func (r *Runner) resolveSlashBinaryExpression(v1, v2 interface{}) (interface{}, error) {
 	n1 := convToNumber(v1)
 	n2 := convToNumber(v2)
-	return new(decimal.Big).Quo(n1, n2), nil
+	return newDecimalBig().Quo(n1, n2), nil
 }
 
 func (r *Runner) resolvePercentBinaryExpression(v1, v2 interface{}) (interface{}, error) {
 	n1 := convToNumber(v1)
 	n2 := convToNumber(v2)
-	return new(decimal.Big).Rem(n1, n2), nil
+	return newDecimalBig().Rem(n1, n2), nil
 }
 
 func (r *Runner) resolveAmpersandBinaryExpression(v1, v2 interface{}) (interface{}, error) {
 	i1, _ := convToNumber(v1).Int64()
 	i2, _ := convToNumber(v2).Int64()
-	return new(decimal.Big).SetFloat64(float64(i1 & i2)), nil
+	return newDecimalBig().SetFloat64(float64(i1 & i2)), nil
 }
 
 func (r *Runner) resolveBarBinaryExpression(v1, v2 interface{}) (interface{}, error) {
 	i1, _ := convToNumber(v1).Int64()
 	i2, _ := convToNumber(v2).Int64()
-	return new(decimal.Big).SetFloat64(float64(i1 | i2)), nil
+	return newDecimalBig().SetFloat64(float64(i1 | i2)), nil
 }
 
 func (r *Runner) resolveCaretBinaryExpression(v1, v2 interface{}) (interface{}, error) {
 	i1, _ := convToNumber(v1).Int64()
 	i2, _ := convToNumber(v2).Int64()
-	return new(decimal.Big).SetFloat64(float64(i1 ^ i2)), nil
+	return newDecimalBig().SetFloat64(float64(i1 ^ i2)), nil
 }
 
 func (r *Runner) resolveEqualsEqualsBinaryExpression(expr *BinaryExpression, v1, v2 interface{}) (interface{}, error) {
@@ -836,7 +836,7 @@ func (r *Runner) resolveLiteralExpression(ctx context.Context, expr *LiteralExpr
 	case SK_CtxKeyword:
 		return ctx, nil
 	case SK_NumberLiteral:
-		r, ok := new(decimal.Big).SetString(expr.Value)
+		r, ok := newDecimalBig().SetString(expr.Value)
 		if !ok {
 			return nil, fmt.Errorf("%s not number literal", expr.Value)
 		}
@@ -890,22 +890,22 @@ func convToNumber(v interface{}) *decimal.Big {
 	case *decimal.Big:
 		return n
 	case string:
-		r, ok := new(decimal.Big).SetString(n)
+		r, ok := newDecimalBig().SetString(n)
 		if !ok {
-			return new(decimal.Big).SetNaN(true)
+			return newDecimalBig().SetNaN(true)
 		}
 		return r
 	case bool:
 		if n {
-			return new(decimal.Big).SetUint64(1)
+			return newDecimalBig().SetUint64(1)
 		} else {
-			return new(decimal.Big).SetUint64(0)
+			return newDecimalBig().SetUint64(0)
 		}
 	default:
 		if IsNull(v) {
-			return new(decimal.Big).SetUint64(0)
+			return newDecimalBig().SetUint64(0)
 		} else {
-			return new(decimal.Big).SetNaN(true)
+			return newDecimalBig().SetNaN(true)
 		}
 	}
 }
@@ -917,7 +917,7 @@ func (r *Runner) toBool(v interface{}) bool {
 	case string:
 		return len(n) > 0
 	case *decimal.Big:
-		return n.Cmp(new(decimal.Big).SetUint64(0)) != 0 && !n.IsNaN(0)
+		return n.Cmp(newDecimalBig().SetUint64(0)) != 0 && !n.IsNaN(0)
 	default:
 		return !IsNull(v)
 	}
@@ -990,35 +990,35 @@ func funTimeFormat(date time.Time, layout string) (string, error) {
 
 // FUNCTION MATH
 func funAbs(v *decimal.Big) (*decimal.Big, error) {
-	return new(decimal.Big).Abs(v), nil
+	return newDecimalBig().Abs(v), nil
 }
 
 func funCeil(v *decimal.Big) (*decimal.Big, error) {
-	result := new(decimal.Big)
+	result := newDecimalBig()
 	decimal.Context64.Ceil(result, v)
 	return result, nil
 }
 
 func funExp(v *decimal.Big) (*decimal.Big, error) {
-	result := new(decimal.Big)
+	result := newDecimalBig()
 	decimal.Context64.Exp(result, v)
 	return result, nil
 }
 
 func funFloor(v *decimal.Big) (*decimal.Big, error) {
-	result := new(decimal.Big)
+	result := newDecimalBig()
 	decimal.Context64.Floor(result, v)
 	return result, nil
 }
 
 func funLn(v *decimal.Big) (*decimal.Big, error) {
-	result := new(decimal.Big)
+	result := newDecimalBig()
 	decimal.Context64.Log(result, v)
 	return result, nil
 }
 
 func funLog(v *decimal.Big) (*decimal.Big, error) {
-	result := new(decimal.Big)
+	result := newDecimalBig()
 	decimal.Context64.Log10(result, v)
 	return result, nil
 }
@@ -1044,12 +1044,12 @@ func funMin(nums ...*decimal.Big) (*decimal.Big, error) {
 }
 
 func funRound(v *decimal.Big) (*decimal.Big, error) {
-	return new(decimal.Big).Round(0), nil
+	return newDecimalBig().Round(0), nil
 }
 
 func funRoundBank(v *decimal.Big) (*decimal.Big, error) {
 	// 将 v 的小数部分提取出来
-	mv := new(decimal.Big).Rem(v, decimal.New(1, 0))
+	mv := newDecimalBig().Rem(v, decimal.New(1, 0))
 	if mv.Cmp(decimal.New(5, -1)) <= 0 {
 		return funCeil(v)
 	} else {
@@ -1058,7 +1058,7 @@ func funRoundBank(v *decimal.Big) (*decimal.Big, error) {
 }
 
 func funRoundCash(v, places *decimal.Big) (*decimal.Big, error) {
-	mv := new(decimal.Big).Rem(v, decimal.New(1, 0))
+	mv := newDecimalBig().Rem(v, decimal.New(1, 0))
 	if mv.Cmp(decimal.New(5, -2)) <= 0 {
 		return funCeil(v)
 	} else {
@@ -1067,7 +1067,7 @@ func funRoundCash(v, places *decimal.Big) (*decimal.Big, error) {
 }
 
 func funSqrt(v *decimal.Big) (*decimal.Big, error) {
-	result := new(decimal.Big)
+	result := newDecimalBig()
 	decimal.Context64.Sqrt(result, v)
 	return result, nil
 }
@@ -1189,7 +1189,7 @@ func funToString(v interface{}) (string, error) {
 func funToInt(v interface{}) (*decimal.Big, error) {
 	n := convToNumber(v)
 	iv, _ := n.Int64()
-	return new(decimal.Big).SetFloat64(float64(iv)), nil
+	return newDecimalBig().SetFloat64(float64(iv)), nil
 }
 
 func funToFloat(v interface{}) (*decimal.Big, error) {

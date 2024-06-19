@@ -295,8 +295,8 @@ func TestToFloatSub(t *testing.T) {
 	}
 	runner := NewRunner()
 	runner.SetThis(map[string]interface{}{
-		"a": 33.199999,
-		"b": 33.199999,
+		"a": 30.749999000000003,
+		"b": 30.749999000000003,
 		"c": 0,
 	})
 	v, err := runner.Resolve(ctx, code.Expression)
@@ -307,6 +307,19 @@ func TestToFloatSub(t *testing.T) {
 	if v != float64(0) {
 		t.Errorf("except 0 but got %v", v)
 		return
+	}
+}
+
+func TestDecimalBigSub(t *testing.T) {
+	a, _ := new(decimal.Big).SetString("30.749999000000003")
+	b, _ := new(decimal.Big).SetString("0")
+	c, _ := new(decimal.Big).SetString("30.749999000000003")
+
+	t1 := decimal.WithContext(decimal.Context128).Sub(a, b)
+	t2 := decimal.WithContext(decimal.Context128).Sub(t1, c)
+	v, _ := t2.Float64()
+	if v != 0 {
+		t.Errorf("except 0 but got %f", v)
 	}
 }
 
