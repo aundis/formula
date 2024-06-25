@@ -542,6 +542,8 @@ func (r *Runner) resolveExclamationUnaryExpression(v interface{}) (interface{}, 
 		return !n, nil
 	case *decimal.Big:
 		return !r.toBool(n), nil
+	case nil:
+		return true, nil
 	default:
 		return nil, fmt.Errorf("unary expressin '!' not support type %T", v)
 	}
