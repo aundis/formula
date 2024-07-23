@@ -197,7 +197,20 @@ func (r *Runner) resolveSelectorExpression(ctx context.Context, expr *SelectorEx
 	if IsNull(v) && expr.Assert {
 		return nil, fmt.Errorf("expr %s value is null, can't access attribute '%s'", astToString(expr.Expression), expr.Name.Value)
 	}
-	return getObjectValueFromKey(v, expr.Name.Value)
+
+	value, err := getObjectValueFromKey(v, expr.Name.Value)
+	if err != nil {
+		return nil, err
+	}
+	// 统一nil值
+	return formatNilValue(value), nil
+}
+
+func formatNilValue(v any) any {
+	if IsNull(v) {
+		return nil
+	}
+	return v
 }
 
 func getObjectValueFromKey(v interface{}, key string) (interface{}, error) {

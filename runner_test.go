@@ -437,3 +437,25 @@ func TestExclamationNilUnaryExpression(t *testing.T) {
 		return
 	}
 }
+
+func TestNilValue(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("a === null"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	runner.SetThis(map[string]interface{}{
+		"a": (*int)(nil),
+	})
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != true {
+		t.Errorf("except true but got %v", v)
+		return
+	}
+}
