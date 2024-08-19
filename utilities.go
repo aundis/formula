@@ -114,3 +114,15 @@ func FormatDiagnostic(source *SourceCode, diagnostic *Diagnostic) string {
 func newDecimalBig() *decimal.Big {
 	return decimal.WithContext(decimal.Context128)
 }
+
+func stringsUniq(arr []string) []string {
+	m := map[string]struct{}{}
+	for _, item := range arr {
+		m[item] = struct{}{}
+	}
+	var result []string
+	for item := range m {
+		result = append(result, item)
+	}
+	return result
+}

@@ -11,7 +11,21 @@ func ResolveReferenceFields(source *SourceCode) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return resolve.fields, nil
+	return stringsUniq(resolve.fields), nil
+}
+
+func ResolveReferenceFieldsNotLocal(source *SourceCode) ([]string, error) {
+	fields, err := ResolveReferenceFields(source)
+	if err != nil {
+		return nil, err
+	}
+	var result []string
+	for _, field := range fields {
+		if !strings.HasPrefix(field, "$") {
+			result = append(result, field)
+		}
+	}
+	return result, nil
 }
 
 type referenceResovle struct {
@@ -38,6 +52,8 @@ func (r *referenceResovle) resolve(node Node) error {
 		return r.resolveCallExpression(n)
 	case *ConditionalExpression:
 		return r.resolveConditionalExpression(n)
+	case *TypeOfExpression:
+		return r.resolveTypeofExpression(n)
 	default:
 		return errors.New("unknown expression type")
 	}
@@ -115,6 +131,14 @@ func (r *referenceResovle) resolveConditionalExpression(v *ConditionalExpression
 		return err
 	}
 	err = r.resolve(v.WhenFalse)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *referenceResovle) resolveTypeofExpression(v *TypeOfExpression) error {
+	err := r.resolve(v.Expression)
 	if err != nil {
 		return err
 	}
