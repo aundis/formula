@@ -481,3 +481,85 @@ func TestNilCmp(t *testing.T) {
 		return
 	}
 }
+
+func TestTypeofExpression(t *testing.T) {
+	simple := map[string]string{
+		"typeof 100":     "number",
+		"typeof 'hello'": "string",
+		"typeof null":    "object",
+		"typeof true":    "boolean",
+	}
+
+	ctx := context.Background()
+	for expr, except := range simple {
+		code, err := ParseSourceCode([]byte(expr))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		runner := NewRunner()
+		v, err := runner.Resolve(ctx, code.Expression)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if v != except {
+			t.Errorf("except %s but got %v", except, v)
+			return
+		}
+	}
+
+}
+
+func TestCommaExpression(t *testing.T) {
+	simple := map[string]any{
+		"'a','b'":     "b",
+		"1,2":         float64(2),
+		"1+1,2+2":     float64(4),
+		"1+1,2+2,3+3": float64(6),
+	}
+
+	ctx := context.Background()
+	for expr, except := range simple {
+		code, err := ParseSourceCode([]byte(expr))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		runner := NewRunner()
+		v, err := runner.Resolve(ctx, code.Expression)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if v != except {
+			t.Errorf("except %v but got %v", except, v)
+			return
+		}
+	}
+}
+
+func TestEqualBinaryExpression(t *testing.T) {
+	simple := map[string]any{
+		"$1=1,$2=2,$1+$2": float64(3),
+	}
+
+	ctx := context.Background()
+	for expr, except := range simple {
+		code, err := ParseSourceCode([]byte(expr))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		runner := NewRunner()
+		v, err := runner.Resolve(ctx, code.Expression)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if v != except {
+			t.Errorf("except %v but got %v", except, v)
+			return
+		}
+	}
+}

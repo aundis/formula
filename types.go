@@ -65,13 +65,26 @@ const (
 	SK_AmpersandAmpersand      // &&
 	SK_BarBar                  // ||
 	SK_QuestionQuestion        // ??
-	SK_Equals                  // =
 	SK_Exclamation             // !
 	SK_ExclamationDot          // !.
 	SK_ExclamationExclamation  // !!
 	SK_Tilde                   // ~
 	SK_Question                // ?
 	SK_Colon                   // :
+
+	// Assignments
+	SK_Equals                                  // =
+	SK_PlusEquals                              // +=
+	SK_MinusEquals                             // -=
+	SK_AsteriskEquals                          // *=
+	SK_SlashEquals                             // /=
+	SK_PercentEquals                           // %=
+	SK_LessThanLessThanEquals                  // <<=
+	SK_GreaterThanGreaterThanEquals            // >>=
+	SK_GreaterThanGreaterThanGreaterThanEquals // >>>=
+	SK_AmpersandEquals                         // &=
+	SK_BarEquals                               // |=
+	SK_CaretEquals                             // ^=
 
 	// Identifiers
 	SK_Identifier
@@ -82,11 +95,14 @@ const (
 	SK_NullKeyword
 	SK_ThisKeyword
 	SK_CtxKeyword
+	SK_TypeofKeyword
 
 	SK_Count
 	// Markers
+	SK_FirstAssignment     = SK_Equals
+	SK_LastAssignment      = SK_CaretEquals
 	SK_FirstKeyword        = SK_TrueKeyword
-	SK_LastKeyword         = SK_CtxKeyword
+	SK_LastKeyword         = SK_TypeofKeyword
 	SK_FirstPunctuation    = SK_OpenParen
 	SK_LastPunctuation     = SK_Comma
 	SK_FirstLiteral        = SK_NumberLiteral
@@ -104,11 +120,16 @@ var tokens = [...]string{
 	SK_Dot:          ".",
 	SK_Comma:        ",",
 	// Keyword
-	SK_TrueKeyword:  "true",
-	SK_FalseKeyword: "false",
-	SK_NullKeyword:  "null",
-	SK_ThisKeyword:  "this",
-	SK_CtxKeyword:   "ctx",
+	SK_TrueKeyword:   "true",
+	SK_FalseKeyword:  "false",
+	SK_NullKeyword:   "null",
+	SK_ThisKeyword:   "this",
+	SK_CtxKeyword:    "ctx",
+	SK_TypeofKeyword: "typeof",
+}
+
+func (tok SyntaxKind) IsAssignmentOperator() bool {
+	return tok >= SK_FirstAssignment && tok <= SK_LastAssignment
 }
 
 func (tok SyntaxKind) IsKeyword() bool { return tok >= SK_FirstKeyword && tok <= SK_LastKeyword }
@@ -260,6 +281,11 @@ type (
 	PrefixUnaryExpression struct {
 		Operator *TokenNode
 		Operand  Expression
+		expression
+	}
+
+	TypeOfExpression struct {
+		Expression Expression
 		expression
 	}
 

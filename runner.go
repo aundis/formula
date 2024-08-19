@@ -103,6 +103,12 @@ type Runner struct {
 func (r *Runner) SetThis(m map[string]interface{}) {
 	r.this = m
 }
+func (r *Runner) SetThisValue(key string, value interface{}) {
+	if r.this == nil {
+		r.this = map[string]interface{}{}
+	}
+	r.this[key] = value
+}
 
 func (r *Runner) Resolve(ctx context.Context, v Expression) (interface{}, error) {
 	res, err := r.resolve(ctx, v)
@@ -141,6 +147,8 @@ func (r *Runner) resolve(ctx context.Context, v Expression) (res interface{}, er
 		res, err = r.resolveCallExpression(ctx, n)
 	case *ConditionalExpression:
 		res, err = r.resolveConditionalExpression(ctx, n)
+	case *TypeOfExpression:
+		res, err = r.resolveTypeofExpression(ctx, n)
 	default:
 		return nil, errors.New("unknown expression type")
 	}
@@ -577,6 +585,12 @@ func (r *Runner) resolveTildeUnaryExpression(v interface{}) (interface{}, error)
 }
 
 func (r *Runner) resolveBinaryExpression(ctx context.Context, expr *BinaryExpression) (interface{}, error) {
+	// First process assignment expression
+	switch expr.Operator.Token {
+	case SK_Equals:
+		return r.resolveEqualBinaryExpression(ctx, expr.Left, expr.Right)
+	}
+
 	v1, err := r.resolve(ctx, expr.Left)
 	if err != nil {
 		return nil, err
@@ -623,6 +637,8 @@ func (r *Runner) resolveBinaryExpression(ctx context.Context, expr *BinaryExpres
 		return r.resolveAmpersandAmpersandBinaryExpression(v1, v2)
 	case SK_BarBar: // ||
 		return r.resolveBarBarBinaryExpression(v1, v2)
+	case SK_Comma:
+		return r.resolveCommaBinaryExpression(v1, v2)
 	}
 	return nil, nil
 }
@@ -815,6 +831,26 @@ func (r *Runner) resolveBarBarBinaryExpression(v1, v2 interface{}) (interface{},
 	}
 }
 
+func (r *Runner) resolveCommaBinaryExpression(_, v2 interface{}) (interface{}, error) {
+	return v2, nil
+}
+
+func (r *Runner) resolveEqualBinaryExpression(ctx context.Context, left, right Expression) (interface{}, error) {
+	if !Is[*Identifier](left) {
+		return 0, errors.New("assignment expression left expression is not identifier")
+	}
+	identifierValue := left.(*Identifier).Value
+	if !strings.HasPrefix(identifierValue, "$") {
+		return 0, fmt.Errorf("assignment expression left identifier must start of '$' but %s", identifierValue)
+	}
+	v2, err := r.resolve(ctx, right)
+	if err != nil {
+		return nil, err
+	}
+	r.SetThisValue(identifierValue, v2)
+	return v2, nil
+}
+
 func (r *Runner) resolveArrayLiteralExpression(ctx context.Context, expr *ArrayLiteralExpression) (interface{}, error) {
 	var list []interface{}
 	if expr.Elements != nil && expr.Elements.Len() > 0 {
@@ -886,6 +922,23 @@ func (r *Runner) resolveConditionalExpression(ctx context.Context, expr *Conditi
 			return nil, err
 		}
 		return v, nil
+	}
+}
+
+func (r *Runner) resolveTypeofExpression(ctx context.Context, expr *TypeOfExpression) (interface{}, error) {
+	value, err := r.resolve(ctx, expr.Expression)
+	if err != nil {
+		return nil, err
+	}
+	switch value.(type) {
+	case bool:
+		return "boolean", nil
+	case string:
+		return "string", nil
+	case *decimal.Big:
+		return "number", nil
+	default:
+		return "object", nil
 	}
 }
 

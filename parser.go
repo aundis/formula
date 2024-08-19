@@ -518,7 +518,23 @@ func (p *Parser) isStartOfExpression() bool {
 }
 
 func (p *Parser) parseExpression() Expression {
+	var expr = p.parseAssignmentExpressionOrHigher()
+	// Comma expression
+	for {
+		operatorToken := p.gotToken(SK_Comma)
+		if operatorToken == nil {
+			break
+		}
+		expr = p.makeBinaryExpression(expr, operatorToken, p.parseAssignmentExpressionOrHigher())
+	}
+	return expr
+}
+
+func (p *Parser) parseAssignmentExpressionOrHigher() Expression {
 	var expr = p.parseBinaryExpression(0)
+	if p.token().IsAssignmentOperator() {
+		return p.makeBinaryExpression(expr, p.parseToken(), p.parseAssignmentExpressionOrHigher())
+	}
 	return p.parseConditionalExpression(expr)
 }
 
@@ -534,10 +550,10 @@ func (p *Parser) parseConditionalExpression(leftOperand Expression) Expression {
 	var node = new(ConditionalExpression)
 	node.Condition = leftOperand
 	node.QuestionTok = questionToken
-	node.WhenTrue = p.parseExpression()
+	node.WhenTrue = p.parseAssignmentExpressionOrHigher()
 	node.ColonTok = p.wantToken(SK_Colon, false,
 		M_0_expected, SK_Colon.ToString())
-	node.WhenFalse = p.parseExpression()
+	node.WhenFalse = p.parseAssignmentExpressionOrHigher()
 	finishNode(p, node, leftOperand.Pos())
 	return node
 }
@@ -636,6 +652,14 @@ func (p *Parser) parsePrefixUnaryExpression() *PrefixUnaryExpression {
 	return finishNode(p, node, pos)
 }
 
+func (p *Parser) parseTypeOfExpression() *TypeOfExpression {
+	var pos = p.getNodePos()
+	var node = new(TypeOfExpression)
+	p.nextToken()
+	node.Expression = p.parseSimpleUnaryExpression()
+	return finishNode(p, node, pos)
+}
+
 func (p *Parser) parseUnaryExpression() Expression {
 	return p.parseSimpleUnaryExpression()
 }
@@ -643,9 +667,9 @@ func (p *Parser) parseUnaryExpression() Expression {
 // Parse simple-unary expression or higher:
 //
 // UnaryExpression:
-//      1) UpdateExpression
-//      3) + UnaryExpression
-//      4) - UnaryExpression
+//  1. UpdateExpression
+//  3. + UnaryExpression
+//  4. - UnaryExpression
 func (p *Parser) parseSimpleUnaryExpression() Expression {
 	switch p.token() {
 	case SK_Plus,
@@ -654,6 +678,8 @@ func (p *Parser) parseSimpleUnaryExpression() Expression {
 		SK_Exclamation,
 		SK_ExclamationExclamation:
 		return p.parsePrefixUnaryExpression()
+	case SK_TypeofKeyword:
+		return p.parseTypeOfExpression()
 	default:
 		return p.parseLeftHandSideExpressionOrHigher()
 	}
@@ -757,7 +783,7 @@ func (p *Parser) parseParenthesizedExpression() *ParenthesizedExpression {
 }
 
 func (p *Parser) parseArgumentOrArrayLiteralElement() Expression {
-	return p.parseExpression()
+	return p.parseAssignmentExpressionOrHigher()
 }
 
 func (p *Parser) parseArgumentExpression() Expression {
