@@ -563,3 +563,28 @@ func TestEqualBinaryExpression(t *testing.T) {
 		}
 	}
 }
+
+func TestUnicodeIdentifier(t *testing.T) {
+	simple := map[string]any{
+		"$中文=1,$中文": float64(1),
+	}
+
+	ctx := context.Background()
+	for expr, except := range simple {
+		code, err := ParseSourceCode([]byte(expr))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		runner := NewRunner()
+		v, err := runner.Resolve(ctx, code.Expression)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if v != except {
+			t.Errorf("except %v but got %v", except, v)
+			return
+		}
+	}
+}
