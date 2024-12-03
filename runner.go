@@ -40,6 +40,7 @@ func init() {
 	innerMap.Store("millSecond", funMillSecond)
 	innerMap.Store("weekDay", funWeekDay)
 	innerMap.Store("timeFormat", funTimeFormat)
+	innerMap.Store("useTimezone", funUseTimezone)
 	// FUNCTION MATH
 	innerMap.Store("abs", funAbs)
 	innerMap.Store("ceil", funCeil)
@@ -1054,6 +1055,14 @@ func funWeekDay(date time.Time) (int, error) {
 
 func funTimeFormat(date time.Time, layout string) (string, error) {
 	return date.Format(layout), nil
+}
+
+func funUseTimezone(date time.Time, name string) (time.Time, error) {
+	location, err := time.LoadLocation(name)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return date.In(location), nil
 }
 
 // FUNCTION MATH

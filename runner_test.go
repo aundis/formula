@@ -588,3 +588,22 @@ func TestUnicodeIdentifier(t *testing.T) {
 		}
 	}
 }
+
+func TestUseTimezone(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("$1=now(),$2=hour(useTimezone($1, 'Asia/Shanghai')),$3=hour(useTimezone($1, 'UTC')),$2===($3+8)%24"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != true {
+		t.Error("except true")
+		return
+	}
+}
