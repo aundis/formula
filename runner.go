@@ -408,6 +408,12 @@ func convTypeToTarget(source interface{}, target reflect.Type) (interface{}, err
 		if isBasicNumberKind(target.Kind()) {
 			return convToBasicNumber(source, target)
 		}
+		if target.Kind() == reflect.String {
+			if IsNull(source) {
+				return "", nil
+			}
+			return fmt.Sprintf("%v", source), nil
+		}
 		return nil, fmt.Errorf("convTypeToTarget %T not conv to %v", source, target)
 	}
 }
