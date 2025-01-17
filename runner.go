@@ -399,8 +399,11 @@ func convTypeToTarget(source interface{}, target reflect.Type) (interface{}, err
 	case reflect.Map:
 		return convMapToTarget(source, target)
 	default:
-		if reflect.ValueOf(source).CanConvert(target) {
-			return reflect.ValueOf(source).Convert(target).Interface(), nil
+		if source != nil {
+			rv := reflect.ValueOf(source)
+			if rv.IsValid() && rv.CanConvert(target) {
+				return rv.Convert(target).Interface(), nil
+			}
 		}
 		if isBasicNumberKind(target.Kind()) {
 			return convToBasicNumber(source, target)
