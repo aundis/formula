@@ -607,3 +607,22 @@ func TestUseTimezone(t *testing.T) {
 		return
 	}
 }
+
+func TestNullEqualsZero(t *testing.T) {
+	ctx := context.Background()
+	code, err := ParseSourceCode([]byte("null==0"))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	runner := NewRunner()
+	v, err := runner.Resolve(ctx, code.Expression)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v != true {
+		t.Error("except true")
+		return
+	}
+}

@@ -639,9 +639,9 @@ func (r *Runner) resolveBinaryExpression(ctx context.Context, expr *BinaryExpres
 		return r.resolveEqualsEqualsBinaryExpression(expr, v1, v2)
 	case SK_ExclamationEquals: // !=
 		return r.resolveNotEqualsBinaryExpression(expr, v1, v2)
-	case SK_EqualsEqualsEquals:
+	case SK_EqualsEqualsEquals: // ===
 		return r.resolveEqualsEqualsEqualsBinaryExpression(expr, v1, v2)
-	case SK_ExclamationEqualsEquals:
+	case SK_ExclamationEqualsEquals: // !==
 		return r.resolveNotEqualsEqualsBinaryExpression(expr, v1, v2)
 	case SK_AmpersandAmpersand: // &&
 		return r.resolveAmpersandAmpersandBinaryExpression(v1, v2)
@@ -776,22 +776,22 @@ func (r *Runner) resolveNotEqualsBinaryExpression(expr *BinaryExpression, v1, v2
 }
 
 func (r *Runner) valueLikeEqualTo(v1, v2 interface{}) bool {
-	switch v1.(type) {
-	case *decimal.Big:
+	if isDecimalBigType(v1) || isDecimalBigType(v2) {
 		n1 := convToNumber(v1)
 		n2 := convToNumber(v2)
 		return n1.Cmp(n2) == 0
-	case bool:
+	}
+	if isBoolType(v1) || isBoolType(v2) {
 		n1 := convToNumber(v1)
 		n2 := convToNumber(v2)
 		return n1.Cmp(n2) == 0
-	case string:
+	}
+	if isStringType(v1) || isStringType(v2) {
 		s1 := convToString(v1)
 		s2 := convToString(v2)
 		return s1 == s2
-	default:
-		return IsNull(v1) && IsNull(v2) || v1 == v2
 	}
+	return IsNull(v1) && IsNull(v2) || v1 == v2
 }
 
 func (r *Runner) resolveEqualsEqualsEqualsBinaryExpression(expr *BinaryExpression, v1, v2 interface{}) (interface{}, error) {

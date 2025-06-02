@@ -126,3 +126,30 @@ func stringsUniq(arr []string) []string {
 	}
 	return result
 }
+
+func isDecimalBigType(v any) bool {
+	switch v.(type) {
+	case *decimal.Big:
+		return true
+	default:
+		return false
+	}
+}
+
+func isBoolType(v any) bool {
+	switch v.(type) {
+	case bool:
+		return true
+	default:
+		return false
+	}
+}
+
+func isStringType(v any) bool {
+	switch v.(type) {
+	case string:
+		return true
+	default:
+		return false
+	}
+}
